@@ -8,9 +8,17 @@ const schema = z.object({
   LOG_LEVEL: z.string().default('info'),
   DATABASE_URL: z.string().url(),
   ADMIN_API_KEY: z.string().min(16, 'ADMIN_API_KEY must be at least 16 characters'),
-  UPSTREAM_API_BASE_URL: z.string().url(),
-  UPSTREAM_API_KEY: z.string().default(''),
-  UPSTREAM_RATE_LIMIT_PER_MIN: z.coerce.number().positive().default(60),
+
+  HYPIXEL_API_BASE_URL: z.string().url().default('https://api.hypixel.net/v2'),
+  // Only needed for keyed endpoints (player/profile data). Bazaar + status work without it.
+  HYPIXEL_API_KEY: z.string().default(''),
+  // Hypixel limits keys per 5-minute window; set this to your key's limit.
+  HYPIXEL_RATE_LIMIT_PER_5MIN: z.coerce.number().positive().default(300),
+  HYPIXEL_STATUS_URL: z.string().url().default('https://status.hypixel.net/api/v2/summary.json'),
+
+  BAZAAR_POLL_SECONDS: z.coerce.number().int().min(10).default(30),
+  BAZAAR_SNAPSHOT_CRON: z.string().default('0 */2 * * *'), // every 2 hours
+  STATUS_POLL_SECONDS: z.coerce.number().int().min(30).default(60),
 });
 
 const parsed = schema.safeParse(process.env);

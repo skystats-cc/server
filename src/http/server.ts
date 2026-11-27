@@ -2,7 +2,8 @@ import Fastify from 'fastify';
 import { ZodError } from 'zod';
 import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
-import { playerRoutes } from '../modules/players/players.routes.js';
+import { bazaarRoutes } from '../modules/bazaar/bazaar.routes.js';
+import { statusRoutes } from '../modules/status/status.routes.js';
 import { adminRoutes } from '../ops/admin.js';
 import { healthRoutes } from '../ops/health.js';
 
@@ -22,7 +23,8 @@ export function buildServer() {
 
   app.register(healthRoutes);
   app.register(adminRoutes, { prefix: '/admin' });
-  app.register(playerRoutes);
+  app.register(bazaarRoutes);
+  app.register(statusRoutes);
   // Register new module routes here.
 
   return app;

@@ -1,4 +1,5 @@
 import { sql } from '../db/client.js';
+import { stopAllLoops } from '../jobs/loop.js';
 import { boss, startBoss } from '../jobs/queue.js';
 import { allQueues, registerAllWorkers } from '../jobs/registry.js';
 import { logger } from '../lib/logger.js';
@@ -9,6 +10,7 @@ logger.info({ queues: allQueues }, 'worker started');
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down worker');
+  stopAllLoops();
   await boss.stop();
   await sql.end();
   process.exit(0);
