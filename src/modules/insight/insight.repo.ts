@@ -40,6 +40,12 @@ export const insightRepo = {
   },
 
   // ---- events ----
+  async itemIdsByName(names: string[]) {
+    if (names.length === 0) return new Map<string, string>();
+    const lower = [...new Set(names.map((n) => n.toLowerCase()))];
+    const rows = await db.select({ id: items.id, name: items.name }).from(items).where(inArray(sql`lower(${items.name})`, lower));
+    return new Map(rows.map((r) => [r.name.toLowerCase(), r.id]));
+  },
   async addEvents(rows: (typeof modEvents.$inferInsert)[]) {
     if (rows.length) await db.insert(modEvents).values(rows);
   },

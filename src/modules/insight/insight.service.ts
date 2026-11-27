@@ -53,6 +53,9 @@ export const insightService = {
   async addEvents(accountId: string, trackingEnabled: boolean, profileId: string | null, events: { type: 'rare_drop'; at: number; itemName: string; itemId?: string; qty?: number }[]) {
     if (!trackingEnabled) throw new ConflictError('tracking_disabled', 'Tracking is turned off for this account');
     const now = Date.now();
+    // Chat only gives item names; match them to ids so sessions can be classified
+    const ids = await insightRepo.itemIdsByName(events.filter((e) => !e.itemId).map((e) => e.itemName));
+    events = events.map((e) => (e.itemId ? e : { ...e, itemId: ids.get(e.itemName.toLowerCase()) }));
     await insightRepo.addEvents(
       events
         .filter((e) => e.at <= now + 60_000 && e.at >= now - DAY)
