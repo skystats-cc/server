@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import { config } from '../lib/config.js';
 import { UpstreamError } from '../lib/errors.js';
 import { CircuitBreaker } from './breaker.js';
@@ -37,3 +37,13 @@ export const fetchSkyblockProfiles = (uuid: string) =>
   });
 
 export const hasHypixelKey = () => Boolean(config.HYPIXEL_API_KEY);
+
+const perkSchema = z.object({ name: z.string(), description: z.string().optional() }).passthrough();
+const candidateSchema = z.object({ key: z.string(), name: z.string(), perks: z.array(perkSchema).default([]), votes: z.number().optional() }).passthrough();
+export const electionSchema = z.object({
+  mayor: z.object({ key: z.string(), name: z.string(), perks: z.array(perkSchema).default([]) }).passthrough().optional(),
+  current: z.object({ year: z.number(), candidates: z.array(candidateSchema) }).passthrough().optional(),
+});
+
+/** SkyBlock mayor and the open election, if any (keyless resources endpoint). */
+export const fetchElection = () => hypixelGet('/resources/skyblock/election', electionSchema);

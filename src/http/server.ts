@@ -8,6 +8,7 @@ import { logger } from '../lib/logger.js';
 import { accountsRoutes } from '../modules/accounts/accounts.routes.js';
 import { authRoutes } from '../modules/auth/auth.routes.js';
 import { bazaarRoutes } from '../modules/bazaar/bazaar.routes.js';
+import { alertsRoutes } from '../modules/alerts/alerts.routes.js';
 import { billingRoutes } from '../modules/billing/billing.routes.js';
 import { discordRoutes } from '../modules/discord/discord.routes.js';
 import { modRoutes } from '../modules/mod/mod.routes.js';
@@ -94,6 +95,7 @@ export async function buildServer() {
   await app.register(billingRoutes);
   await app.register(playersRoutes);
   await app.register(discordRoutes);
+  await app.register(alertsRoutes);
   // Register new module routes here.
 
   return app;

@@ -2,8 +2,12 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import {
   accounts,
+  alertRules,
   auditLog,
   discordIdentities,
+  moneyGoals,
+  notificationPrefs,
+  notifications,
   entitlements,
   memberDaily,
   memberSnapshots,
@@ -64,6 +68,10 @@ export const privacyRepo = {
       moneyDaily: await db.select().from(memberDaily).where(eq(memberDaily.playerUuid, uuid)),
       sessions: sess, // token hashes are left out on purpose
       entitlement: entitlement ?? null,
+      notificationPrefs: (await db.select().from(notificationPrefs).where(eq(notificationPrefs.accountId, accountId)))[0] ?? null,
+      alerts: await db.select().from(alertRules).where(eq(alertRules.accountId, accountId)),
+      goals: await db.select().from(moneyGoals).where(eq(moneyGoals.accountId, accountId)),
+      notifications: await db.select().from(notifications).where(eq(notifications.accountId, accountId)),
       discord: (await db.select().from(discordIdentities).where(eq(discordIdentities.accountId, accountId)))[0] ?? null,
       auditLog: await db.select().from(auditLog).where(eq(auditLog.accountId, accountId)),
     };
