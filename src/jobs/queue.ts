@@ -6,9 +6,12 @@ import { logger } from '../lib/logger.js';
 export const boss = new PgBoss({ connectionString: config.DATABASE_URL });
 boss.on('error', (err) => logger.error({ err }, 'pg-boss error'));
 
-export async function startBoss(queues: string[]) {
+export type QueueDef = string | { name: string; policy?: PgBoss.QueuePolicy };
+
+export async function startBoss(queues: QueueDef[]) {
   await boss.start();
-  for (const name of queues) {
-    if (!(await boss.getQueue(name))) await boss.createQueue(name);
+  for (const q of queues) {
+    const def = typeof q === 'string' ? { name: q } : q;
+    if (!(await boss.getQueue(def.name))) await boss.createQueue(def.name, def);
   }
 }
