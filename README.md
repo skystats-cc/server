@@ -41,6 +41,12 @@ src/
 drizzle/      generated SQL migrations (commit these, never edit after merge)
 ```
 
+## Production
+
+CI builds `ghcr.io/skystats-cc/server` on every merge to `main` (`docker.yml`). The `infra` repo runs it as three containers from one image: `migrate` (once), `api`, `worker`.
+
+The public API is rate limited per client IP (`RATE_LIMIT_PER_MIN`, default 120; health and admin routes exempt). Behind Cloudflare the client IP comes from `cf-connecting-ip`. The API contract lives in the `api-spec` repo; keep `openapi.yaml` in sync when you change a route.
+
 ## Endpoints
 
 | Method | Path | Notes |
@@ -59,5 +65,6 @@ drizzle/      generated SQL migrations (commit these, never edit after merge)
 
 - Real item names from `/v2/resources/skyblock/items` (currently title-cased ids).
 - Cap history by subscription tier (FREE 7d / PRO 90d / MAX unlimited) + retention cleanup job.
-- Discord auth + API keys for `/v1`.
+- Discord auth + API keys for `/v1` (per-key rate limits instead of per-IP).
+- Contract tests: validate responses against `api-spec/openapi.yaml` in CI.
 - Validate requests/responses against the `api-spec` repo once it exists.

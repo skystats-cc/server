@@ -9,6 +9,18 @@ const schema = z.object({
   DATABASE_URL: z.string().url(),
   ADMIN_API_KEY: z.string().min(16, 'ADMIN_API_KEY must be at least 16 characters'),
 
+  // HTTP hardening
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'), // behind cloudflared / Caddy in production
+  // Comma-separated browser origins allowed to call the API cross-origin, e.g. https://skystats.cc
+  CORS_ORIGINS: z
+    .string()
+    .default('')
+    .transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+  RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(120),
+
   HYPIXEL_API_BASE_URL: z.string().url().default('https://api.hypixel.net/v2'),
   // Only needed for keyed endpoints (player/profile data). Bazaar + status work without it.
   HYPIXEL_API_KEY: z.string().default(''),

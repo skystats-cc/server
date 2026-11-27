@@ -7,7 +7,7 @@ import { logger } from '../lib/logger.js';
 
 // The API only *sends* jobs; the worker process runs them.
 await startBoss(allQueues);
-const app = buildServer();
+const app = await buildServer();
 await app.listen({ host: config.HOST, port: config.PORT });
 
 async function shutdown(signal: string) {
