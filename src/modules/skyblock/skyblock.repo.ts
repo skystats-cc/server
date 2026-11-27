@@ -1,6 +1,6 @@
-import { and, eq, gt, inArray, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { accounts, memberSnapshots, players, profileMembers, skyblockProfiles } from '../../db/schema.js';
+import { accounts, players, profileMembers, skyblockProfiles } from '../../db/schema.js';
 import type { ParsedProfile } from './skyblock.parse.js';
 
 export const skyblockRepo = {
@@ -9,15 +9,6 @@ export const skyblockRepo = {
     return row ?? null;
   },
 
-  /** Members whose SkyStats account has tracking turned off */
-  async trackingDisabled(uuids: string[]) {
-    if (uuids.length === 0) return new Set<string>();
-    const rows = await db
-      .select({ uuid: accounts.playerUuid })
-      .from(accounts)
-      .where(and(inArray(accounts.playerUuid, uuids), eq(accounts.trackingEnabled, false)));
-    return new Set(rows.map((r) => r.uuid));
-  },
 
   /** Store everything one /skyblock/profiles call told us about `requester` and their co-ops */
   async saveProfiles(requester: string, profiles: ParsedProfile[]) {
@@ -75,27 +66,6 @@ export const skyblockRepo = {
     });
   },
 
-  /** Append a money snapshot unless one was taken for this member in the last `minMinutes` */
-  async snapshotIfDue(
-    s: { profileId: string; playerUuid: string; purse: number | null; personalBank: number | null; profileBank: number | null; skyblockXp: number | null },
-    minMinutes: number,
-  ) {
-    const since = new Date(Date.now() - minMinutes * 60_000);
-    const [recent] = await db
-      .select({ id: memberSnapshots.id })
-      .from(memberSnapshots)
-      .where(
-        and(
-          eq(memberSnapshots.playerUuid, s.playerUuid),
-          eq(memberSnapshots.profileId, s.profileId),
-          gt(memberSnapshots.takenAt, since),
-        ),
-      )
-      .limit(1);
-    if (recent) return false;
-    await db.insert(memberSnapshots).values(s);
-    return true;
-  },
 
   /** The requester's active profiles + every active member, with SkyStats/mod info */
   async myProfiles(uuid: string) {
@@ -125,6 +95,7 @@ export const skyblockRepo = {
         skyblockXp: profileMembers.skyblockXp,
         accountId: accounts.id,
         trackingEnabled: accounts.trackingEnabled,
+        hideBank: accounts.hideBank,
         modLastSeenAt: accounts.modLastSeenAt,
       })
       .from(profileMembers)

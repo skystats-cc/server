@@ -1,6 +1,5 @@
 import type PgBoss from 'pg-boss';
 import type { QueueDef } from '../../jobs/queue.js';
-import { logger } from '../../lib/logger.js';
 import { SKYBLOCK_QUEUES } from './skyblock.queues.js';
 import { skyblockService } from './skyblock.service.js';
 
@@ -8,8 +7,9 @@ import { skyblockService } from './skyblock.service.js';
 export const queues: QueueDef[] = [
   { name: SKYBLOCK_QUEUES.refreshPlayer, policy: 'stately' },
   { name: SKYBLOCK_QUEUES.lookupName, policy: 'stately' },
-  SKYBLOCK_QUEUES.refreshActive,
 ];
+// There is deliberately no cron that polls active players. Hypixel's API policy forbids
+// continuous polling of player data to build histories; money history comes from the mod.
 
 export async function registerWorkers(boss: PgBoss) {
   await boss.work<{ uuid: string }>(SKYBLOCK_QUEUES.refreshPlayer, async (jobs) => {
@@ -20,9 +20,6 @@ export async function registerWorkers(boss: PgBoss) {
     for (const job of jobs) await skyblockService.lookupName(job.data.uuid);
   });
 
-  await boss.work(SKYBLOCK_QUEUES.refreshActive, async () => {
-    const n = await skyblockService.refreshActive();
-    if (n) logger.info({ queued: n }, 'refreshing active players');
-  });
-  await boss.schedule(SKYBLOCK_QUEUES.refreshActive, '*/10 * * * *');
+  // Remove the schedule left behind by earlier versions that polled active players.
+  await boss.unschedule(SKYBLOCK_QUEUES.refreshActiveLegacy).catch(() => {});
 }
