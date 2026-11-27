@@ -9,7 +9,7 @@ const productParams = z.object({
     .transform((s) => s.toUpperCase()),
 });
 const listQuery = z.object({ q: z.string().max(64).optional() });
-const historyQuery = z.object({ days: z.coerce.number().int().min(1).max(90).default(7) });
+const historyQuery = z.object({ days: z.coerce.number().int().min(1).max(3650).default(7) });
 
 export const bazaarRoutes: FastifyPluginAsync = async (app) => {
   app.get('/v1/bazaar', async (req) => {

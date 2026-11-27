@@ -25,6 +25,8 @@ export const bazaarRepo = {
           sellOrders: excluded('sell_orders'),
           upstreamUpdatedAt: excluded('upstream_updated_at'),
           polledAt: excluded('polled_at'),
+          buySummary: excluded('buy_summary'),
+          sellSummary: excluded('sell_summary'),
         },
       });
   },

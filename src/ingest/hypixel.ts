@@ -47,3 +47,22 @@ export const electionSchema = z.object({
 
 /** SkyBlock mayor and the open election, if any (keyless resources endpoint). */
 export const fetchElection = () => hypixelGet('/resources/skyblock/election', electionSchema);
+
+const itemsSchema = z.object({
+  items: z.array(z.object({ id: z.string(), name: z.string(), category: z.string().optional(), tier: z.string().optional(), npc_sell_price: z.number().optional() }).passthrough()),
+});
+/** Every SkyBlock item (keyless resources endpoint) */
+export const fetchItems = () => hypixelGet('/resources/skyblock/items', itemsSchema);
+
+const endedSchema = z.object({
+  auctions: z.array(z.object({ auction_id: z.string(), price: z.number(), bin: z.boolean().optional(), timestamp: z.number(), item_bytes: z.string() }).passthrough()),
+});
+/** Auctions that ended in the last ~60 seconds (keyless) */
+export const fetchEndedAuctions = () => hypixelGet('/skyblock/auctions_ended', endedSchema);
+
+const pageSchema = z.object({
+  totalPages: z.number(),
+  auctions: z.array(z.object({ bin: z.boolean().optional(), starting_bid: z.number(), item_bytes: z.string() }).passthrough()),
+});
+/** One page of active auctions (keyless) */
+export const fetchAuctionPage = (page: number) => hypixelGet(`/skyblock/auctions?page=${page}`, pageSchema);

@@ -33,6 +33,9 @@ const bazaarFields = () => ({
 export const bazaarProducts = pgTable('bazaar_products', {
   productId: text('product_id').primaryKey(),
   ...bazaarFields(),
+  // Top of the order book (from buy_summary / sell_summary), latest only
+  buySummary: jsonb('buy_summary').notNull().default([]),
+  sellSummary: jsonb('sell_summary').notNull().default([]),
   upstreamUpdatedAt: ts('upstream_updated_at').notNull(),
   polledAt: ts('polled_at').notNull(),
 });
@@ -379,3 +382,137 @@ export const skyblockElection = pgTable('skyblock_election', {
   open: boolean('open').notNull().default(false),
   checkedAt: ts('checked_at').notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Items, auctions, methods (phase 4)
+// ---------------------------------------------------------------------------
+
+export const items = pgTable('items', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  category: text('category'),
+  tier: text('tier'),
+  npcSellPrice: doublePrecision('npc_sell_price'),
+  updatedAt: ts('updated_at').notNull(),
+});
+
+// Crafting recipes (optional source; see RECIPES_SOURCE_URL)
+export const recipes = pgTable('recipes', {
+  outputId: text('output_id').primaryKey(),
+  outputCount: integer('output_count').notNull().default(1),
+  inputs: jsonb('inputs').notNull(), // [{ id, count }]
+  updatedAt: ts('updated_at').notNull(),
+});
+
+// Hourly auction sale prices from /skyblock/auctions_ended (BIN only)
+export const auctionPrices = pgTable(
+  'auction_prices',
+  {
+    itemId: text('item_id').notNull(),
+    hour: ts('hour').notNull(),
+    sales: integer('sales').notNull(),
+    median: doublePrecision('median').notNull(),
+    min: doublePrecision('min').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.hour] })],
+);
+
+// Raw BIN sales from /skyblock/auctions_ended, kept 2 days, rolled up hourly into auction_prices
+export const auctionSales = pgTable(
+  'auction_sales',
+  {
+    auctionId: text('auction_id').primaryKey(),
+    itemId: text('item_id').notNull(),
+    pricePerUnit: doublePrecision('price_per_unit').notNull(),
+    soldAt: ts('sold_at').notNull(),
+  },
+  (t) => [index('auction_sales_sold_idx').on(t.soldAt)],
+);
+
+export const lowestBins = pgTable('lowest_bins', {
+  itemId: text('item_id').primaryKey(),
+  price: doublePrecision('price').notNull(),
+  count: integer('count').notNull(),
+  updatedAt: ts('updated_at').notNull(),
+});
+
+export const watchlist = pgTable(
+  'watchlist',
+  {
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.productId] })],
+);
+
+export const bazaarAnomalies = pgTable(
+  'bazaar_anomalies',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    productId: text('product_id').notNull(),
+    detectedAt: ts('detected_at').notNull().defaultNow(),
+    z: doublePrecision('z').notNull(),
+    price: doublePrecision('price').notNull(),
+  },
+  (t) => [index('bazaar_anomalies_detected_idx').on(t.detectedAt)],
+);
+
+export const bazaarCorrelations = pgTable(
+  'bazaar_correlations',
+  {
+    productId: text('product_id').notNull(),
+    otherId: text('other_id').notNull(),
+    r: doublePrecision('r').notNull(),
+    computedAt: ts('computed_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.productId, t.otherId] })],
+);
+
+export const electionHistory = pgTable('election_history', {
+  year: integer('year').primaryKey(),
+  mayor: text('mayor'),
+  perks: jsonb('perks').notNull().default([]),
+  recordedAt: ts('recorded_at').notNull().defaultNow(),
+});
+
+// Custom money-making methods (Max). Built-in and generated methods live in code.
+export const customMethods = pgTable('custom_methods', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  spec: jsonb('spec').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+// Hourly value of every public method, for method history charts
+export const methodValues = pgTable(
+  'method_values',
+  {
+    methodId: text('method_id').notNull(),
+    hour: ts('hour').notNull(),
+    value: doublePrecision('value').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.methodId, t.hour] })],
+);
+
+// Community ratings: votes only, no free text (keeps us out of user-to-user content rules)
+export const methodVotes = pgTable(
+  'method_votes',
+  {
+    methodId: text('method_id').notNull(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    vote: integer('vote').notNull(), // -1 | 1
+    stillWorks: boolean('still_works'),
+    difficulty: integer('difficulty'), // 1-5
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.methodId, t.accountId] })],
+);

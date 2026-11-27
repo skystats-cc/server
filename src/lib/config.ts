@@ -65,6 +65,12 @@ const schema = z.object({
   // SkyBlock patch notes feed for free patch notices (empty = off)
   SKYBLOCK_NEWS_RSS_URL: z.string().default('https://hypixel.net/forums/skyblock-patch-notes.158/index.rss'),
 
+  // Bazaar sales tax used in flip maths (Hypixel's base rate; perks lower it)
+  BAZAAR_TAX: z.coerce.number().min(0).max(0.1).default(0.0125),
+  // Optional per-item recipe JSON, {id} replaced by the item id (NEU repo format). Empty = off.
+  // Check the source's licence before turning this on.
+  RECIPES_SOURCE_URL: z.string().default(''),
+
   BAZAAR_POLL_SECONDS: z.coerce.number().int().min(10).default(30),
   BAZAAR_SNAPSHOT_CRON: z.string().default('0 */2 * * *'), // every 2 hours
   STATUS_POLL_SECONDS: z.coerce.number().int().min(30).default(60),
