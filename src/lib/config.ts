@@ -52,6 +52,16 @@ const schema = z.object({
   BILLING_GRACE_DAYS: z.coerce.number().int().min(0).default(7), // paid features after a failed payment
   SOFT_RETENTION_DAYS: z.coerce.number().int().min(0).default(30), // hidden-not-deleted window after downgrade
 
+  // Discord login (OAuth2, scope "identify" only). Empty client id = Discord login off.
+  DISCORD_CLIENT_ID: z.string().default(''),
+  DISCORD_CLIENT_SECRET: z.string().default(''),
+  // Must match the redirect registered in the Discord developer portal. Same origin as the site,
+  // so the session cookie lands on skystats.cc (Caddy proxies /v1 to the API).
+  DISCORD_REDIRECT_URI: z.string().url().default('https://skystats.cc/v1/auth/discord/callback'),
+  DISCORD_API_BASE_URL: z.string().url().default('https://discord.com/api/v10'),
+  // Shared secret the bot sends as x-bot-key. Empty = bot access off. Never accepted through Cloudflare.
+  BOT_API_KEY: z.string().default('').refine((v) => v === '' || v.length >= 32, 'BOT_API_KEY must be at least 32 characters'),
+
   BAZAAR_POLL_SECONDS: z.coerce.number().int().min(10).default(30),
   BAZAAR_SNAPSHOT_CRON: z.string().default('0 */2 * * *'), // every 2 hours
   STATUS_POLL_SECONDS: z.coerce.number().int().min(30).default(60),

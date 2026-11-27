@@ -7,7 +7,7 @@ export interface AuthContext {
   sessionId: string;
   accountId: string;
   playerUuid: string;
-  kind: 'mod' | 'web';
+  kind: 'mod' | 'web' | 'bot';
 }
 
 export function toAccountDto(a: AccountRow) {

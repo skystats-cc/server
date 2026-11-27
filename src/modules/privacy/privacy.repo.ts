@@ -3,6 +3,7 @@ import { db } from '../../db/client.js';
 import {
   accounts,
   auditLog,
+  discordIdentities,
   entitlements,
   memberDaily,
   memberSnapshots,
@@ -13,7 +14,7 @@ import {
   skyblockProfiles,
 } from '../../db/schema.js';
 
-export const PRIVACY_FIELDS = ['trackingEnabled', 'profilePublic', 'showOnLeaderboards', 'allowActivityPings', 'hideBank'] as const;
+export const PRIVACY_FIELDS = ['trackingEnabled', 'profilePublic', 'showOnLeaderboards', 'allowActivityPings', 'hideBank', 'discordPublic', 'showTierRole'] as const;
 export type PrivacySettings = Record<(typeof PRIVACY_FIELDS)[number], boolean>;
 
 export const privacyRepo = {
@@ -25,6 +26,8 @@ export const privacyRepo = {
         showOnLeaderboards: accounts.showOnLeaderboards,
         allowActivityPings: accounts.allowActivityPings,
         hideBank: accounts.hideBank,
+        discordPublic: accounts.discordPublic,
+        showTierRole: accounts.showTierRole,
       })
       .from(accounts)
       .where(eq(accounts.id, accountId))
@@ -61,6 +64,7 @@ export const privacyRepo = {
       moneyDaily: await db.select().from(memberDaily).where(eq(memberDaily.playerUuid, uuid)),
       sessions: sess, // token hashes are left out on purpose
       entitlement: entitlement ?? null,
+      discord: (await db.select().from(discordIdentities).where(eq(discordIdentities.accountId, accountId)))[0] ?? null,
       auditLog: await db.select().from(auditLog).where(eq(auditLog.accountId, accountId)),
     };
   },

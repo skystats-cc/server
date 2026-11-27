@@ -10,6 +10,8 @@ const patchBody = z
     showOnLeaderboards: z.boolean(),
     allowActivityPings: z.boolean(),
     hideBank: z.boolean(),
+    discordPublic: z.boolean(),
+    showTierRole: z.boolean(),
   })
   .partial()
   .strict();
@@ -17,10 +19,10 @@ const patchBody = z
 const deleteBody = z.object({ confirm: z.literal('DELETE') }).strict();
 
 export const privacyRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/v1/me/privacy', { preHandler: requireAuth('web') }, async (req) => privacyService.get(req.auth!.accountId));
+  app.get('/v1/me/privacy', { preHandler: requireAuth(['web', 'bot']) }, async (req) => privacyService.get(req.auth!.accountId));
 
-  app.patch('/v1/me/privacy', { preHandler: requireAuth('web') }, async (req) =>
-    privacyService.update(req.auth!.accountId, patchBody.parse(req.body ?? {})),
+  app.patch('/v1/me/privacy', { preHandler: requireAuth(['web', 'bot']) }, async (req) =>
+    privacyService.update(req.auth!.accountId, patchBody.parse(req.body ?? {}), req.auth!.kind),
   );
 
   // Right of access + portability. Free for everyone, a few times an hour.

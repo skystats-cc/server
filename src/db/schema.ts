@@ -90,6 +90,8 @@ export const accounts = pgTable('accounts', {
   showOnLeaderboards: boolean('show_on_leaderboards').notNull().default(false),
   allowActivityPings: boolean('allow_activity_pings').notNull().default(false),
   hideBank: boolean('hide_bank').notNull().default(true),
+  discordPublic: boolean('discord_public').notNull().default(false), // /whois and the "linked" role
+  showTierRole: boolean('show_tier_role').notNull().default(false), // Pro/Max role in the SkyStats server
   modLastSeenAt: ts('mod_last_seen_at'),
   modVersion: text('mod_version'),
   createdAt: ts('created_at').notNull().defaultNow(),
@@ -130,6 +132,9 @@ export const pairings = pgTable('pairings', {
   createdAt: ts('created_at').notNull().defaultNow(),
   expiresAt: ts('expires_at').notNull(),
   linkedAt: ts('linked_at'),
+  // Set when the pairing was started from Discord (/link): claiming it also links this Discord user
+  discordId: text('discord_id'),
+  discordUsername: text('discord_username'),
 });
 
 // ---------------------------------------------------------------------------
@@ -247,3 +252,29 @@ export const auditLog = pgTable(
   },
   (t) => [index('audit_log_account_idx').on(t.accountId, t.at)],
 );
+
+// ---------------------------------------------------------------------------
+// Discord
+// ---------------------------------------------------------------------------
+
+// A Minecraft account's Discord login. One Discord user may own several Minecraft accounts (alts).
+export const discordIdentities = pgTable(
+  'discord_identities',
+  {
+    accountId: uuid('account_id')
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    discordId: text('discord_id').notNull(),
+    discordUsername: text('discord_username'),
+    linkedAt: ts('linked_at').notNull().defaultNow(),
+  },
+  (t) => [index('discord_identities_discord_idx').on(t.discordId)],
+);
+
+// Discord OAuth `state`, single use. Only the hash is stored; the browser holds the value in a cookie too.
+export const oauthStates = pgTable('oauth_states', {
+  stateHash: text('state_hash').primaryKey(),
+  mode: text('mode').notNull(), // login | link
+  accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
+  expiresAt: ts('expires_at').notNull(),
+});

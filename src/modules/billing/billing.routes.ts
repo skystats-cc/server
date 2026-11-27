@@ -11,7 +11,7 @@ const checkoutBody = z.object({ tier: z.enum(['pro', 'max']), interval: z.enum([
 export const billingRoutes: FastifyPluginAsync = async (app) => {
   app.get('/v1/me/entitlement', { preHandler: requireAuth() }, async (req) => entitlementsService.describe(req.auth!.accountId));
 
-  app.post('/v1/billing/checkout', { preHandler: requireAuth('web') }, async (req) => {
+  app.post('/v1/billing/checkout', { preHandler: requireAuth(['web', 'bot']) }, async (req) => {
     const { tier, interval } = checkoutBody.parse(req.body ?? {});
     return billingService.checkout(req.auth!.accountId, tier, interval);
   });

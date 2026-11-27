@@ -1,4 +1,4 @@
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gt, lt, ne } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accounts, authChallenges, pairings, players, sessions } from '../../db/schema.js';
 
@@ -96,6 +96,29 @@ export const accountsRepo = {
 
   async touchSession(sessionId: string) {
     await db.update(sessions).set({ lastUsedAt: new Date() }).where(eq(sessions.id, sessionId));
+  },
+
+  async listSessions(accountId: string) {
+    return db
+      .select({ id: sessions.id, kind: sessions.kind, userAgent: sessions.userAgent, createdAt: sessions.createdAt, lastUsedAt: sessions.lastUsedAt, expiresAt: sessions.expiresAt })
+      .from(sessions)
+      .where(and(eq(sessions.accountId, accountId), gt(sessions.expiresAt, new Date())));
+  },
+
+  async deleteOwnSession(accountId: string, sessionId: string) {
+    const rows = await db
+      .delete(sessions)
+      .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, accountId)))
+      .returning({ id: sessions.id });
+    return rows.length > 0;
+  },
+
+  async deleteOtherSessions(accountId: string, keepSessionId: string) {
+    const rows = await db
+      .delete(sessions)
+      .where(and(eq(sessions.accountId, accountId), ne(sessions.id, keepSessionId)))
+      .returning({ id: sessions.id });
+    return rows.length;
   },
 
   async deleteSession(sessionId: string) {

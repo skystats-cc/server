@@ -9,6 +9,7 @@ import { accountsRoutes } from '../modules/accounts/accounts.routes.js';
 import { authRoutes } from '../modules/auth/auth.routes.js';
 import { bazaarRoutes } from '../modules/bazaar/bazaar.routes.js';
 import { billingRoutes } from '../modules/billing/billing.routes.js';
+import { discordRoutes } from '../modules/discord/discord.routes.js';
 import { modRoutes } from '../modules/mod/mod.routes.js';
 import { moneyRoutes } from '../modules/money/money.routes.js';
 import { pairingRoutes } from '../modules/pairing/pairing.routes.js';
@@ -92,6 +93,7 @@ export async function buildServer() {
   await app.register(privacyRoutes);
   await app.register(billingRoutes);
   await app.register(playersRoutes);
+  await app.register(discordRoutes);
   // Register new module routes here.
 
   return app;

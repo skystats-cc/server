@@ -4,10 +4,10 @@ import { pairings } from '../../db/schema.js';
 
 export const pairingRepo = {
   /** Returns null if the code collided with an existing one (caller retries) */
-  async create(code: string, secretHash: string, expiresAt: Date) {
+  async create(code: string, secretHash: string, expiresAt: Date, discord?: { id: string; username: string | null }) {
     const rows = await db
       .insert(pairings)
-      .values({ code, secretHash, expiresAt })
+      .values({ code, secretHash, expiresAt, discordId: discord?.id, discordUsername: discord?.username })
       .onConflictDoNothing({ target: pairings.code })
       .returning({ id: pairings.id });
     return rows[0]?.id ?? null;
@@ -23,14 +23,14 @@ export const pairingRepo = {
     return row ?? null;
   },
 
-  /** Atomically link a pending, unexpired code to an account. Returns false if someone got there first. */
+  /** Atomically link a pending, unexpired code to an account. Returns null if someone got there first. */
   async link(code: string, accountId: string) {
     const rows = await db
       .update(pairings)
       .set({ status: 'linked', accountId, linkedAt: new Date() })
       .where(and(eq(pairings.code, code), eq(pairings.status, 'pending'), gt(pairings.expiresAt, new Date())))
-      .returning({ id: pairings.id });
-    return rows.length > 0;
+      .returning({ id: pairings.id, discordId: pairings.discordId, discordUsername: pairings.discordUsername });
+    return rows[0] ?? null;
   },
 
   /** Atomically mark a linked pairing as used (so the browser gets exactly one session) */
