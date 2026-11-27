@@ -12,6 +12,7 @@ import { billingRoutes } from '../modules/billing/billing.routes.js';
 import { modRoutes } from '../modules/mod/mod.routes.js';
 import { moneyRoutes } from '../modules/money/money.routes.js';
 import { pairingRoutes } from '../modules/pairing/pairing.routes.js';
+import { playersRoutes } from '../modules/players/players.routes.js';
 import { privacyRoutes } from '../modules/privacy/privacy.routes.js';
 import { skyblockRoutes } from '../modules/skyblock/skyblock.routes.js';
 import { statusRoutes } from '../modules/status/status.routes.js';
@@ -90,6 +91,7 @@ export async function buildServer() {
   await app.register(moneyRoutes);
   await app.register(privacyRoutes);
   await app.register(billingRoutes);
+  await app.register(playersRoutes);
   // Register new module routes here.
 
   return app;
