@@ -1,8 +1,14 @@
 import type PgBoss from 'pg-boss';
-import * as players from '../modules/players/players.jobs.js';
+import * as bazaar from '../modules/bazaar/bazaar.jobs.js';
+import * as status from '../modules/status/status.jobs.js';
+
+export interface JobModule {
+  queues: string[];
+  registerWorkers: (boss: PgBoss) => Promise<void>;
+}
 
 // Add each new module here.
-const modules: { queues: string[]; registerWorkers: (boss: PgBoss) => Promise<void> }[] = [players];
+const modules: JobModule[] = [bazaar, status];
 
 export const allQueues = modules.flatMap((m) => m.queues);
 

@@ -1,10 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
 import { adminAuth } from '../http/middleware/adminAuth.js';
 import { boss } from '../jobs/queue.js';
 import { allQueues } from '../jobs/registry.js';
 import { logger } from '../lib/logger.js';
-import { playersService } from '../modules/players/players.service.js';
+import { bazaarService } from '../modules/bazaar/bazaar.service.js';
 
 // Admin actions for the MCP server / ops tooling. All require the x-admin-key header.
 export const adminRoutes: FastifyPluginAsync = async (app) => {
@@ -17,10 +16,10 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return { queues: sizes };
   });
 
-  app.post('/players/:uuid/refresh', async (req, reply) => {
-    const { uuid } = z.object({ uuid: z.string().min(1) }).parse(req.params);
-    await playersService.requestRefresh(uuid);
-    return reply.code(202).send({ queued: uuid });
+  // Take a bazaar snapshot now instead of waiting for the cron
+  app.post('/bazaar/snapshot', async (_req, reply) => {
+    await bazaarService.requestSnapshot();
+    return reply.code(202).send({ queued: true });
   });
 
   // Exits the process; the container's restart policy brings it back.

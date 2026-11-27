@@ -1,11 +1,14 @@
 # skystats server
 
-Backend for skystats.cc: data ingestion, snapshot storage, and the public API.
+Backend for skystats.cc: Hypixel ingestion, snapshot storage, and the public API.
 
 One codebase, two processes:
 
 - **api** (`src/apps/api.ts`) serves HTTP: the public API under `/v1`, health checks, and the admin endpoints under `/admin`.
-- **worker** (`src/apps/worker.ts`) runs ingestion and scheduled jobs (pg-boss, stored in Postgres).
+- **worker** (`src/apps/worker.ts`) runs ingestion:
+  - polls the whole Bazaar every 30s into `bazaar_products` (realtime view)
+  - copies every product into `bazaar_snapshots` every 2h (history, append-only)
+  - polls status.hypixel.net every 60s into `hypixel_status`
 
 ## Stack
 
@@ -44,13 +47,17 @@ drizzle/      generated SQL migrations (commit these, never edit after merge)
 |---|---|---|
 | GET | `/healthz` | process up |
 | GET | `/readyz` | DB reachable |
-| GET | `/v1/players/:uuid` | latest snapshot; unknown players are queued for fetch (404 until ready) |
-| GET | `/v1/players/:uuid/history?limit=50` | snapshot history |
+| GET | `/v1/bazaar?q=` | every product's latest prices, optional search |
+| GET | `/v1/bazaar/:productId` | one product, e.g. `ENCHANTED_DIAMOND` |
+| GET | `/v1/bazaar/:productId/history?days=7` | snapshots (1–90 days) |
+| GET | `/v1/status` | cached status.hypixel.net (`indicator`: none/minor/major/critical/unknown) |
 | GET | `/admin/queues` | needs `x-admin-key` |
-| POST | `/admin/players/:uuid/refresh` | needs `x-admin-key` |
+| POST | `/admin/bazaar/snapshot` | needs `x-admin-key`; snapshot now |
 | POST | `/admin/restart` | needs `x-admin-key`; relies on container restart policy |
 
 ## TODO
 
-- Fill in the real upstream response shape in `src/ingest/schemas.ts` and the auth header in `src/ingest/client.ts`.
+- Real item names from `/v2/resources/skyblock/items` (currently title-cased ids).
+- Cap history by subscription tier (FREE 7d / PRO 90d / MAX unlimited) + retention cleanup job.
+- Discord auth + API keys for `/v1`.
 - Validate requests/responses against the `api-spec` repo once it exists.

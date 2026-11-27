@@ -9,14 +9,14 @@
 
 ## Adding a module
 
-Copy `src/modules/players/` as the template. A module has:
+Copy `src/modules/bazaar/` as the template. A module has:
 
 | File | Does | Must not |
 |---|---|---|
 | `x.routes.ts` | validate input with zod, call the service | touch the DB |
 | `x.service.ts` | business logic | know about HTTP or write SQL |
 | `x.repo.ts` | DB queries | contain business logic |
-| `x.jobs.ts` | export `queues` + `registerWorkers(boss)` | call upstream directly (go through `src/ingest`) |
+| `x.jobs.ts` | export `queues` + `registerWorkers(boss)`; use pg-boss cron for ≥1 min jobs, `every()` from `src/jobs/loop.ts` for faster loops | call upstream directly (go through `src/ingest`) |
 | `x.queues.ts` | queue name constants | |
 
 Then:
@@ -28,6 +28,6 @@ Then:
 ## Rules
 
 - **Snapshots are append-only.** Never update or delete snapshot rows.
-- **All upstream calls go through `src/ingest/client.ts`** so the shared rate limiter applies.
+- **All Hypixel calls go through `src/ingest/hypixel.ts`** so the shared rate limiter applies.
 - **Never edit a migration after it's merged.** Write a new one.
 - Config comes from env vars via `src/lib/config.ts`. Add new vars there and to `.env.example`.
