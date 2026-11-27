@@ -51,14 +51,10 @@ export async function buildServer() {
     return reply.code(500).send({ error: 'internal_error' });
   });
 
-  app.setNotFoundHandler((req, reply) =>
-    reply.code(404).send({ error: 'not_found', message: `No route for ${req.method} ${req.url}` }),
-  );
-
-  await app.register(healthRoutes);
-  await app.register(adminRoutes, { prefix: '/admin' });
-  await app.register(bazaarRoutes);
-  await app.register(statusRoutes);
+  app.register(healthRoutes);
+  app.register(adminRoutes, { prefix: '/admin' });
+  app.register(bazaarRoutes);
+  app.register(statusRoutes);
   // Register new module routes here.
 
   return app;

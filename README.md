@@ -65,6 +65,5 @@ The public API is rate limited per client IP (`RATE_LIMIT_PER_MIN`, default 120;
 
 - Real item names from `/v2/resources/skyblock/items` (currently title-cased ids).
 - Cap history by subscription tier (FREE 7d / PRO 90d / MAX unlimited) + retention cleanup job.
-- Discord auth + API keys for `/v1` (per-key rate limits instead of per-IP).
-- Contract tests: validate responses against `api-spec/openapi.yaml` in CI.
+- Discord auth + API keys for `/v1`.
 - Validate requests/responses against the `api-spec` repo once it exists.
