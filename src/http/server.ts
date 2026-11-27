@@ -5,20 +5,40 @@ import { ZodError } from 'zod';
 import { config } from '../lib/config.js';
 import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { accountsRoutes } from '../modules/accounts/accounts.routes.js';
+import { authRoutes } from '../modules/auth/auth.routes.js';
 import { bazaarRoutes } from '../modules/bazaar/bazaar.routes.js';
+import { modRoutes } from '../modules/mod/mod.routes.js';
+import { pairingRoutes } from '../modules/pairing/pairing.routes.js';
+import { skyblockRoutes } from '../modules/skyblock/skyblock.routes.js';
 import { statusRoutes } from '../modules/status/status.routes.js';
 import { adminRoutes } from '../ops/admin.js';
 import { healthRoutes } from '../ops/health.js';
+import { registerAuth } from './auth.js';
 
 const UNLIMITED = ['/healthz', '/readyz', '/admin'];
 
 export async function buildServer() {
   const app = Fastify({ loggerInstance: logger, trustProxy: config.TRUST_PROXY });
 
+  // Accept POSTs with a JSON content-type but no body (e.g. /v1/pairing, /v1/auth/logout)
+  app.removeContentTypeParser('application/json');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (body === '' || body === undefined) return done(null, undefined);
+    try {
+      done(null, JSON.parse(body as string));
+    } catch {
+      done(Object.assign(new Error('Invalid JSON body'), { statusCode: 400 }), undefined);
+    }
+  });
+
   await app.register(cors, {
     origin: config.CORS_ORIGINS.length ? config.CORS_ORIGINS : false,
     methods: ['GET'],
   });
+
+  // Cookies + resolves req.auth (mod bearer token or web session cookie)
+  await registerAuth(app);
 
   await app.register(rateLimit, {
     max: config.RATE_LIMIT_PER_MIN,
@@ -51,10 +71,19 @@ export async function buildServer() {
     return reply.code(500).send({ error: 'internal_error' });
   });
 
-  app.register(healthRoutes);
-  app.register(adminRoutes, { prefix: '/admin' });
-  app.register(bazaarRoutes);
-  app.register(statusRoutes);
+  app.setNotFoundHandler((req, reply) =>
+    reply.code(404).send({ error: 'not_found', message: `No route for ${req.method} ${req.url}` }),
+  );
+
+  await app.register(healthRoutes);
+  await app.register(adminRoutes, { prefix: '/admin' });
+  await app.register(bazaarRoutes);
+  await app.register(statusRoutes);
+  await app.register(authRoutes);
+  await app.register(pairingRoutes);
+  await app.register(accountsRoutes);
+  await app.register(skyblockRoutes);
+  await app.register(modRoutes);
   // Register new module routes here.
 
   return app;

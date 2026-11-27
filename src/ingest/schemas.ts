@@ -48,3 +48,38 @@ export const statusSummarySchema = z
   .passthrough();
 
 export type StatusSummary = z.infer<typeof statusSummarySchema>;
+
+// GET /v2/skyblock/profiles?uuid=  (API key required). Member objects are huge; we only read a few fields.
+const profileMemberSchema = z
+  .object({
+    profile: z
+      .object({
+        first_join: z.number().optional(),
+        bank_account: z.number().optional(), // personal bank
+        coop_invitation: z.object({ confirmed: z.boolean() }).passthrough().optional(),
+        deletion_notice: z.object({ timestamp: z.number() }).passthrough().optional(), // left the profile
+      })
+      .passthrough()
+      .optional(),
+    currencies: z.object({ coin_purse: z.number().optional() }).passthrough().optional(),
+    leveling: z.object({ experience: z.number().optional() }).passthrough().optional(),
+  })
+  .passthrough();
+
+export const skyblockProfileSchema = z
+  .object({
+    profile_id: z.string(),
+    cute_name: z.string().optional(),
+    selected: z.boolean().optional(),
+    game_mode: z.string().optional(),
+    banking: z.object({ balance: z.number().optional() }).passthrough().optional(),
+    members: z.record(profileMemberSchema),
+  })
+  .passthrough();
+
+export const skyblockProfilesResponseSchema = z.object({
+  success: z.boolean(),
+  profiles: z.array(skyblockProfileSchema).nullable(),
+});
+
+export type SkyblockProfilesResponse = z.infer<typeof skyblockProfilesResponseSchema>;

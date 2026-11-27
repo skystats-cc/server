@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "profiles": [
+    {
+      "profile_id": "1a2b3c4d-0000-4000-8000-000000000001",
+      "cute_name": "Strawberry",
+      "selected": true,
+      "banking": { "balance": 125000000.5, "transactions": [] },
+      "members": {
+        "11111111111111111111111111111111": {
+          "profile": { "first_join": 1640995200000, "bank_account": 2500000 },
+          "currencies": { "coin_purse": 4200000.25 },
+          "leveling": { "experience": 23456 }
+        },
+        "22222222222222222222222222222222": {
+          "profile": { "first_join": 1650000000000, "coop_invitation": { "timestamp": 1, "invited_by": "x", "confirmed": true, "confirmed_timestamp": 2 } },
+          "currencies": { "coin_purse": 900000 },
+          "leveling": { "experience": 18000 }
+        },
+        "33333333333333333333333333333333": {
+          "profile": { "first_join": 1660000000000, "deletion_notice": { "timestamp": 1700000000000 } },
+          "currencies": { "coin_purse": 0 }
+        },
+        "44444444444444444444444444444444": {
+          "profile": { "coop_invitation": { "timestamp": 1, "invited_by": "x", "confirmed": false } }
+        }
+      }
+    },
+    {
+      "profile_id": "1a2b3c4d000040008000000000000002",
+      "cute_name": "Kiwi",
+      "selected": false,
+      "game_mode": "ironman",
+      "members": {
+        "11111111111111111111111111111111": {
+          "profile": { "first_join": 1700000000000 },
+          "currencies": { "coin_purse": 10 },
+          "leveling": { "experience": 150 }
+        }
+      }
+    }
+  ]
+}

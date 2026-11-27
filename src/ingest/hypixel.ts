@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import { config } from '../lib/config.js';
 import { UpstreamError } from '../lib/errors.js';
 import { TokenBucket } from './ratelimit.js';
-import { bazaarResponseSchema, statusSummarySchema } from './schemas.js';
+import { bazaarResponseSchema, skyblockProfilesResponseSchema, statusSummarySchema } from './schemas.js';
 
 // All Hypixel calls go through here. Keyed calls share one rate limiter.
 const perWindow = config.HYPIXEL_RATE_LIMIT_PER_5MIN;
@@ -27,3 +27,11 @@ export async function hypixelGet<T>(path: string, schema: z.ZodType<T, z.ZodType
 export const fetchBazaar = () => hypixelGet('/skyblock/bazaar', bazaarResponseSchema);
 
 export const fetchStatus = () => getJson(config.HYPIXEL_STATUS_URL, statusSummarySchema);
+
+/** All SkyBlock profiles a player is a member of, with every member's data. Needs HYPIXEL_API_KEY. */
+export const fetchSkyblockProfiles = (uuid: string) =>
+  hypixelGet(`/skyblock/profiles?uuid=${encodeURIComponent(uuid)}`, skyblockProfilesResponseSchema, {
+    keyed: true,
+  });
+
+export const hasHypixelKey = () => Boolean(config.HYPIXEL_API_KEY);
