@@ -41,6 +41,12 @@ src/
 drizzle/      generated SQL migrations (commit these, never edit after merge)
 ```
 
+## Production
+
+CI builds `ghcr.io/skystats-cc/server` on every merge to `main` (`docker.yml`). The `infra` repo runs it as three containers from one image: `migrate` (once), `api`, `worker`.
+
+The public API is rate limited per client IP (`RATE_LIMIT_PER_MIN`, default 120; health and admin routes exempt). Behind Cloudflare the client IP comes from `cf-connecting-ip`. The API contract lives in the `api-spec` repo; keep `openapi.yaml` in sync when you change a route.
+
 ## Endpoints
 
 | Method | Path | Notes |

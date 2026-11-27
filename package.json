@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev:api": "tsx watch src/apps/api.ts",
     "dev:worker": "tsx watch src/apps/worker.ts",
@@ -16,6 +18,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "@fastify/rate-limit": "^11.3.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.0",
     "fastify": "^5.2.0",
