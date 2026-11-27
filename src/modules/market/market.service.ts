@@ -17,6 +17,13 @@ const need = (tier: Tier, min: Tier, what: string) => {
   if (!atLeast(tier, min)) throw new ForbiddenError('upgrade_required', `${what} needs SkyStats ${min === 'pro' ? 'Pro' : 'Max'} or above`);
 };
 
+let cachedBook: { at: number; book: Promise<Awaited<ReturnType<typeof priceBook>>> } | null = null;
+/** The price book, cached for a minute (used on every mod snapshot) */
+export function cachedPriceBook() {
+  if (!cachedBook || Date.now() - cachedBook.at > 60_000) cachedBook = { at: Date.now(), book: priceBook() };
+  return cachedBook.book;
+}
+
 /** Live price lookup shared by methods, crafts and arbitrage */
 async function priceBook() {
   const [quotes, itemRows, bins] = await Promise.all([marketRepo.allQuotes(), marketRepo.allItems(), marketRepo.allLowestBins()]);

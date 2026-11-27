@@ -4,6 +4,8 @@ import { normalizeUuid } from '../../lib/ids.js';
 import { logger } from '../../lib/logger.js';
 import { accountsService } from '../accounts/accounts.service.js';
 import { alertsService } from '../alerts/alerts.service.js';
+import { insightRepo } from '../insight/insight.repo.js';
+import { insightService } from '../insight/insight.service.js';
 import { entitlementsService } from '../entitlements/entitlements.service.js';
 import { deleteBefore, effectiveTier, TIERS, visibleFrom } from '../entitlements/tiers.js';
 import { skyblockService } from '../skyblock/skyblock.service.js';
@@ -21,7 +23,14 @@ export const moneyService = {
    */
   async reportFromMod(
     accountId: string,
-    input: { profileId: string; purse: number; personalBank?: number | null; profileBank?: number | null; skyblockXp?: number | null },
+    input: {
+      profileId: string;
+      purse: number;
+      personalBank?: number | null;
+      profileBank?: number | null;
+      skyblockXp?: number | null;
+      inventory?: { id: string; count: number }[];
+    },
   ) {
     const account = await accountsService.get(accountId);
     if (!account.trackingEnabled) throw new ConflictError('tracking_disabled', 'Tracking is turned off for this account');
@@ -32,20 +41,21 @@ export const moneyService = {
       void skyblockService.requestRefresh(account.uuid).catch((err) => logger.warn({ err }, 'refresh enqueue failed'));
       return { stored: false, reason: 'unknown_profile' as const };
     }
+    const coins = { purse: input.purse, personalBank: input.personalBank ?? null, profileBank: input.profileBank ?? null, skyblockXp: input.skyblockXp ?? null };
     const stored = await moneyRepo.snapshotIfDue(
       {
         profileId,
         playerUuid: account.uuid,
-        purse: input.purse,
-        personalBank: input.personalBank ?? null,
-        profileBank: input.profileBank ?? null,
-        skyblockXp: input.skyblockXp ?? null,
+        ...coins,
+        inventoryValue: await insightService.inventoryValue(input.inventory),
+        kind: await insightService.kindOf(account.uuid, profileId, coins),
       },
       config.MEMBER_SNAPSHOT_MIN_MINUTES,
     );
     if (stored) {
       const total = input.purse + (input.personalBank ?? 0) + (input.profileBank ?? 0);
       void alertsService.checkGoals(accountId, profileId, total).catch((err) => logger.warn({ err }, 'goal check failed'));
+      void insightService.onSnapshot(accountId, profileId, total).catch((err) => logger.warn({ err }, 'session update failed'));
     }
     return { stored, reason: stored ? undefined : ('too_soon' as const) };
   },
@@ -85,7 +95,10 @@ export const moneyService = {
     for (const r of rows) {
       const tier = effectiveTier(r.tier ? { tier: r.tier, status: r.status ?? 'none', currentPeriodEnd: r.currentPeriodEnd, graceUntil: r.graceUntil } : null, now);
       const before = deleteBefore(tier, r.downgradedAt ?? null, config.SOFT_RETENTION_DAYS, now);
-      if (before) deleted += await moneyRepo.deleteHistoryBefore(r.playerUuid, before);
+      if (before) {
+        deleted += await moneyRepo.deleteHistoryBefore(r.playerUuid, before);
+        await insightRepo.deleteBefore(r.accountId, before);
+      }
     }
     deleted += await moneyRepo.deleteOrphanHistory();
     return deleted;

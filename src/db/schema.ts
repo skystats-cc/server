@@ -96,6 +96,7 @@ export const accounts = pgTable('accounts', {
   hideBank: boolean('hide_bank').notNull().default(true),
   discordPublic: boolean('discord_public').notNull().default(false), // /whois and the "linked" role
   showTierRole: boolean('show_tier_role').notNull().default(false), // Pro/Max role in the SkyStats server
+  activityInsights: boolean('activity_insights').notNull().default(false), // profiling: off by default (Children's Code)
   modLastSeenAt: ts('mod_last_seen_at'),
   modVersion: text('mod_version'),
   createdAt: ts('created_at').notNull().defaultNow(),
@@ -192,6 +193,9 @@ export const memberSnapshots = pgTable(
     // Where the numbers came from. Only 'mod' (the player's own client) is written now:
     // Hypixel's API policy forbids building stat histories by polling the Public API.
     source: text('source').notNull().default('mod'),
+    // Value of the player's inventory at bazaar/BIN prices when the mod sent it (only the total is kept)
+    inventoryValue: doublePrecision('inventory_value'),
+    kind: text('kind').notNull().default('normal'), // normal | transfer | reset
   },
   (t) => [
     index('member_snapshots_member_taken_idx').on(t.playerUuid, t.profileId, t.takenAt),
@@ -515,4 +519,60 @@ export const methodVotes = pgTable(
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.methodId, t.accountId] })],
+);
+
+// ---------------------------------------------------------------------------
+// Mod-powered insight (phase 5)
+// ---------------------------------------------------------------------------
+
+// Play sessions from mod heartbeats (a gap of 30+ minutes starts a new one)
+export const playSessions = pgTable(
+  'play_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id'),
+    startedAt: ts('started_at').notNull(),
+    lastSeenAt: ts('last_seen_at').notNull(),
+    coinsStart: doublePrecision('coins_start'),
+    coinsEnd: doublePrecision('coins_end'),
+    activity: text('activity'), // only with activity insights on
+    methodId: text('method_id'), // tagged by the player
+  },
+  (t) => [index('play_sessions_account_idx').on(t.accountId, t.startedAt)],
+);
+
+// Events the mod saw (rare drops). Only while tracking is on; follows tier retention.
+export const modEvents = pgTable(
+  'mod_events',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id'),
+    at: ts('at').notNull(),
+    type: text('type').notNull(), // rare_drop
+    itemId: text('item_id'),
+    itemName: text('item_name'),
+    qty: integer('qty'),
+  },
+  (t) => [index('mod_events_account_idx').on(t.accountId, t.at)],
+);
+
+// Private chart notes ("bought Hyperion"). Pro and above; never shown to anyone else.
+export const annotations = pgTable(
+  'annotations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    at: ts('at').notNull(),
+    text: text('text').notNull(),
+  },
+  (t) => [index('annotations_account_idx').on(t.accountId, t.profileId)],
 );
