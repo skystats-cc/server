@@ -97,6 +97,9 @@ export const accounts = pgTable('accounts', {
   discordPublic: boolean('discord_public').notNull().default(false), // /whois and the "linked" role
   showTierRole: boolean('show_tier_role').notNull().default(false), // Pro/Max role in the SkyStats server
   activityInsights: boolean('activity_insights').notNull().default(false), // profiling: off by default (Children's Code)
+  // Public profile look (Pro: theme; Max: vanity link). Preset ids only, no uploads.
+  profileTheme: text('profile_theme'),
+  vanity: text('vanity').unique(),
   modLastSeenAt: ts('mod_last_seen_at'),
   modVersion: text('mod_version'),
   createdAt: ts('created_at').notNull().defaultNow(),
@@ -575,4 +578,101 @@ export const annotations = pgTable(
     text: text('text').notNull(),
   },
   (t) => [index('annotations_account_idx').on(t.accountId, t.profileId)],
+);
+
+// ---------------------------------------------------------------------------
+// Social & community (phase 6). Everything here is opt-in.
+// ---------------------------------------------------------------------------
+
+// Materialised leaderboards (every 15 minutes), only players with showOnLeaderboards on
+export const leaderboardEntries = pgTable(
+  'leaderboard_entries',
+  {
+    board: text('board').notNull(), // gain | consistency | coop
+    period: text('period').notNull(), // 7d | 30d
+    scope: text('scope').notNull(), // global | mode:<gameMode>
+    subject: text('subject').notNull(), // account id, or profile id for co-op boards
+    rank: integer('rank').notNull(),
+    value: doublePrecision('value').notNull(),
+    label: text('label').notNull(), // username, or co-op name
+    computedAt: ts('computed_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.board, t.period, t.scope, t.subject] })],
+);
+
+export const follows = pgTable(
+  'follows',
+  {
+    followerId: uuid('follower_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    followedId: uuid('followed_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.followerId, t.followedId] })],
+);
+
+export const achievements = pgTable(
+  'achievements',
+  {
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    earnedAt: ts('earned_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.key] })],
+);
+
+// Discord-server grinding competitions. No entry fees and no prizes with money value.
+export const competitions = pgTable('competitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  guildId: text('guild_id').notNull(),
+  name: text('name').notNull(),
+  startsAt: ts('starts_at').notNull(),
+  endsAt: ts('ends_at').notNull(),
+  createdByDiscord: text('created_by_discord').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const competitionEntries = pgTable(
+  'competition_entries',
+  {
+    competitionId: uuid('competition_id')
+      .notNull()
+      .references(() => competitions.id, { onDelete: 'cascade' }),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    joinedAt: ts('joined_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.competitionId, t.accountId] })],
+);
+
+// Daily mini-games in Discord. Just for fun: no stakes, no prizes. Kept 30 days.
+export const gameRounds = pgTable(
+  'game_rounds',
+  {
+    game: text('game').notNull(), // guess | predict
+    day: date('day', { mode: 'string' }).notNull(),
+    productId: text('product_id').notNull(),
+    startPrice: doublePrecision('start_price').notNull(),
+    endPrice: doublePrecision('end_price'),
+  },
+  (t) => [primaryKey({ columns: [t.game, t.day] })],
+);
+
+export const gamePlays = pgTable(
+  'game_plays',
+  {
+    game: text('game').notNull(),
+    day: date('day', { mode: 'string' }).notNull(),
+    discordId: text('discord_id').notNull(),
+    answer: doublePrecision('answer').notNull(), // guessed price, or +1/-1 for up/down
+    points: integer('points'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.game, t.day, t.discordId] })],
 );

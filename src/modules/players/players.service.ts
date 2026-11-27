@@ -1,5 +1,6 @@
 import { NotFoundError } from '../../lib/errors.js';
 import { skyblockLevel } from '../skyblock/skyblock.parse.js';
+import { socialService } from '../social/social.service.js';
 import { playersRepo } from './players.repo.js';
 
 const DAY = 86_400_000;
@@ -25,6 +26,9 @@ export const playersService = {
     return {
       uuid: p.uuid,
       username: p.username,
+      theme: p.profileTheme,
+      vanity: p.vanity,
+      badges: await socialService.publicBadges(p.accountId, p.showTierRole),
       usesMod: p.modLastSeenAt !== null && Date.now() - p.modLastSeenAt.getTime() < 30 * DAY,
       profiles: profiles.sort((a, b) => Number(b.selected) - Number(a.selected)),
     };

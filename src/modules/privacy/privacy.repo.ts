@@ -2,8 +2,11 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import {
   accounts,
+  achievements,
   alertRules,
   annotations,
+  competitionEntries,
+  follows,
   auditLog,
   modEvents,
   playSessions,
@@ -80,6 +83,9 @@ export const privacyRepo = {
       playSessions: await db.select().from(playSessions).where(eq(playSessions.accountId, accountId)),
       modEvents: await db.select().from(modEvents).where(eq(modEvents.accountId, accountId)),
       annotations: await db.select().from(annotations).where(eq(annotations.accountId, accountId)),
+      follows: await db.select().from(follows).where(eq(follows.followerId, accountId)),
+      achievements: await db.select().from(achievements).where(eq(achievements.accountId, accountId)),
+      competitionEntries: await db.select().from(competitionEntries).where(eq(competitionEntries.accountId, accountId)),
       watchlist: await db.select().from(watchlist).where(eq(watchlist.accountId, accountId)),
       customMethods: await db.select().from(customMethods).where(eq(customMethods.accountId, accountId)),
       methodVotes: await db.select().from(methodVotes).where(eq(methodVotes.accountId, accountId)),
