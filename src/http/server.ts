@@ -30,7 +30,7 @@ import { adminRoutes } from '../ops/admin.js';
 import { healthRoutes } from '../ops/health.js';
 import { registerAuth } from './auth.js';
 
-const UNLIMITED = ['/healthz', '/readyz', '/admin'];
+const UNLIMITED = ['/healthz', '/readyz', '/admin', '/metrics'];
 
 export async function buildServer() {
   const app = Fastify({
