@@ -36,7 +36,11 @@ export const bazaarService = {
 
     const upstreamUpdatedAt = new Date(data.lastUpdated);
     const polledAt = new Date();
-    const rows: BazaarRow[] = Object.values(data.products).map(({ quick_status: q }) => ({
+    const rows: BazaarRow[] = Object.values(data.products).map(({ quick_status: q, buy_summary, sell_summary }) => ({
+      // Order book tops for the depth chart. In Hypixel's naming, buy_summary are sell offers
+      // (what you buy from) and sell_summary are buy orders (what you sell into).
+      buySummary: buy_summary.slice(0, 15),
+      sellSummary: sell_summary.slice(0, 15),
       productId: q.productId,
       buyPrice: q.buyPrice,
       sellPrice: q.sellPrice,
@@ -81,7 +85,8 @@ export const bazaarService = {
     return toDto(row);
   },
 
-  // TODO: cap `days` by the caller's subscription tier (FREE 7 / PRO 90 / MAX unlimited).
+  // Raw price history is free at every range: Hypixel requires paywalled API content to be
+  // transformative, so only computed insight (depth, spread, seasonality, flips) is gated.
   async history(productId: string, days: number) {
     if (!(await bazaarRepo.find(productId))) throw new NotFoundError(`bazaar product ${productId}`);
     const since = new Date(Date.now() - days * 86_400_000);

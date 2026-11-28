@@ -11,6 +11,7 @@ import { bazaarRoutes } from '../modules/bazaar/bazaar.routes.js';
 import { alertsRoutes } from '../modules/alerts/alerts.routes.js';
 import { billingRoutes } from '../modules/billing/billing.routes.js';
 import { discordRoutes } from '../modules/discord/discord.routes.js';
+import { marketRoutes } from '../modules/market/market.routes.js';
 import { modRoutes } from '../modules/mod/mod.routes.js';
 import { moneyRoutes } from '../modules/money/money.routes.js';
 import { pairingRoutes } from '../modules/pairing/pairing.routes.js';
@@ -96,6 +97,7 @@ export async function buildServer() {
   await app.register(playersRoutes);
   await app.register(discordRoutes);
   await app.register(alertsRoutes);
+  await app.register(marketRoutes);
   // Register new module routes here.
 
   return app;

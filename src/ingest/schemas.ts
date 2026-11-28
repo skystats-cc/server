@@ -19,7 +19,14 @@ export const bazaarResponseSchema = z.object({
   success: z.boolean(),
   lastUpdated: z.number(),
   products: z.record(
-    z.object({ product_id: z.string(), quick_status: bazaarQuickStatusSchema }).passthrough(),
+    z
+      .object({
+        product_id: z.string(),
+        quick_status: bazaarQuickStatusSchema,
+        buy_summary: z.array(z.object({ amount: z.number(), pricePerUnit: z.number(), orders: z.number() })).default([]),
+        sell_summary: z.array(z.object({ amount: z.number(), pricePerUnit: z.number(), orders: z.number() })).default([]),
+      })
+      .passthrough(),
   ),
 });
 
