@@ -86,6 +86,7 @@ export const moneyService = {
 
   /** Worker: daily rollups for the last two days */
   rollup: () => moneyRepo.rollupSince(new Date(Date.now() - 2 * DAY)),
+  rollupBackfill: (days: number) => moneyRepo.rollupSince(new Date(Date.now() - days * DAY)),
 
   /** Worker: delete history older than each account's tier allows (after the soft window). */
   async enforceRetention() {

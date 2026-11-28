@@ -49,6 +49,8 @@ export function effectiveTier(e: EntitlementState | null, now = new Date()): Tie
   if (!e || !(TIER_ORDER as readonly string[]).includes(e.tier) || e.tier === 'free') return 'free';
   const tier = e.tier as Tier;
   if (e.status === 'active' || e.status === 'trialing') return tier;
+  // Gift codes and admin comps: a fixed end date, no billing behind them
+  if ((e.status === 'gift' || e.status === 'comp') && e.currentPeriodEnd && e.currentPeriodEnd > now) return tier;
   // Failed payment: keep paid features through the grace period
   if (e.status === 'past_due' && e.graceUntil && e.graceUntil > now) return tier;
   // Cancelled but already paid for: keep it until the period ends

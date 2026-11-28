@@ -1,3 +1,4 @@
+import { platformService } from '../platform/platform.service.js';
 import { config } from '../../lib/config.js';
 import { ConflictError, UnavailableError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
@@ -37,7 +38,7 @@ export const billingService = {
    * Stripe Checkout for a subscription. UK consumer law: the customer must agree to the terms,
    * which say the service starts immediately and they can cancel within 14 days for a refund.
    */
-  async checkout(accountId: string, tier: 'pro' | 'max', interval: 'month' | 'year') {
+  async checkout(accountId: string, tier: 'pro' | 'max', interval: 'month' | 'year', creator?: string) {
     const prices = tier === 'max' ? config.STRIPE_PRICES_MAX : config.STRIPE_PRICES_PRO;
     const price = interval === 'year' ? prices[1] : prices[0];
     if (!price) throw new ConflictError('price_not_configured', `No ${interval}ly price for ${tier}`);
@@ -57,10 +58,13 @@ export const billingService = {
       'custom_text[terms_of_service_acceptance][message]':
         'Your plan starts straight away. You can cancel any time, and within 14 days of buying for a full refund. Prices include VAT.',
       'automatic_tax[enabled]': 'true',
+      // Discount codes are entered on Stripe's page; creator codes are recorded for revenue share
+      allow_promotion_codes: 'true',
     };
+    if (creator) params['subscription_data[metadata][creator]'] = creator;
     if (current?.stripeCustomerId) params.customer = current.stripeCustomerId;
     const session = await stripeRequest<{ url: string }>('POST', '/checkout/sessions', params);
-    await audit.log('user', 'billing.checkout_started', accountId, { tier, interval });
+    await audit.log('user', 'billing.checkout_started', accountId, { tier, interval, creator: creator ?? null });
     return { url: session.url };
   },
 
@@ -93,6 +97,11 @@ export const billingService = {
     switch (event.type) {
       case 'checkout.session.completed': {
         const accountId = o.client_reference_id as string | undefined;
+        const meta = (o.metadata ?? {}) as Record<string, string>;
+        if (meta.kind === 'gift') {
+          if (o.payment_status === 'paid') await platformService.issueGift(o.id as string, accountId ?? null, meta.tier ?? '');
+          break;
+        }
         const customer = o.customer as string | undefined;
         if (accountId && customer) await entitlementsRepo.upsert(accountId, { stripeCustomerId: customer });
         break;

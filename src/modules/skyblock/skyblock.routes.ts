@@ -1,3 +1,4 @@
+import { entitlementsService } from '../entitlements/entitlements.service.js';
 import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../http/auth.js';
 import { skyblockService } from './skyblock.service.js';
@@ -15,7 +16,8 @@ export const skyblockRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: requireAuth(), config: { rateLimit: { max: 6, timeWindow: '1 minute' } } },
     async (req, reply) => {
       // Manual refresh: allowed once a minute per player
-      const queued = await skyblockService.requestRefresh(req.auth!.playerUuid, { minMinutes: 1 });
+      const tier = await entitlementsService.tierOf(req.auth!.accountId);
+      const queued = await skyblockService.requestRefresh(req.auth!.playerUuid, { minMinutes: 1, priority: tier === 'max' ? 2 : tier === 'pro' ? 1 : 0 });
       return reply.code(202).send({ queued });
     },
   );

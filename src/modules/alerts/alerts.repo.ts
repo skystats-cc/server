@@ -109,6 +109,14 @@ export const alertsRepo = {
 
   // ---- goals ----
   listGoals: (accountId: string) => db.select().from(moneyGoals).where(eq(moneyGoals.accountId, accountId)).orderBy(asc(moneyGoals.createdAt)),
+  async dailyTotals(accountId: string, profileId: string, days: number) {
+    const rows = (await db.execute(sql`
+      select d.day::timestamptz as day, d.close_total as total from member_daily d
+      join accounts a on a.player_uuid = d.player_uuid
+      where a.id = ${accountId} and d.profile_id = ${profileId} and d.day >= (now() - make_interval(days => ${days}))::date
+      order by d.day`)) as unknown as { day: string | Date; total: number }[];
+    return rows.map((r) => ({ day: new Date(r.day), total: Number(r.total) }));
+  },
   async createGoal(accountId: string, profileId: string, target: number) {
     const [row] = await db.insert(moneyGoals).values({ accountId, profileId, target }).returning();
     return row!;

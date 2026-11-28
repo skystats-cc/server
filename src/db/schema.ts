@@ -98,6 +98,7 @@ export const accounts = pgTable('accounts', {
   showTierRole: boolean('show_tier_role').notNull().default(false), // Pro/Max role in the SkyStats server
   activityInsights: boolean('activity_insights').notNull().default(false), // profiling: off by default (Children's Code)
   // Public profile look (Pro: theme; Max: vanity link). Preset ids only, no uploads.
+  bannedAt: ts('banned_at'), // set by an admin; signs the account out everywhere
   profileTheme: text('profile_theme'),
   vanity: text('vanity').unique(),
   modLastSeenAt: ts('mod_last_seen_at'),
@@ -676,3 +677,72 @@ export const gamePlays = pgTable(
   },
   (t) => [primaryKey({ columns: [t.game, t.day, t.discordId] })],
 );
+
+// ---------------------------------------------------------------------------
+// Platform (phase 7)
+// ---------------------------------------------------------------------------
+
+// Public API keys (Max). Only the SHA-256 of the key is stored; the prefix is shown to the owner.
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    prefix: text('prefix').notNull(),
+    keyHash: text('key_hash').notNull().unique(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    lastUsedAt: ts('last_used_at'),
+    revokedAt: ts('revoked_at'),
+  },
+  (t) => [index('api_keys_account_idx').on(t.accountId)],
+);
+
+// Outgoing webhooks for your own alerts (Max). Payloads are signed with the secret.
+export const webhooks = pgTable('webhooks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  secret: text('secret').notNull(),
+  active: boolean('active').notNull().default(true),
+  failures: integer('failures').notNull().default(0),
+  lastStatus: integer('last_status'),
+  lastDeliveryAt: ts('last_delivery_at'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const featureFlags = pgTable('feature_flags', {
+  key: text('key').primaryKey(),
+  enabled: boolean('enabled').notNull().default(false),
+  minTier: text('min_tier'), // null = everyone
+  rolloutPercent: integer('rollout_percent').notNull().default(100),
+  description: text('description'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+// Last success / failure per scheduled job, for "missed its window" alerts
+export const jobRuns = pgTable('job_runs', {
+  name: text('name').primaryKey(),
+  lastOkAt: ts('last_ok_at'),
+  lastErrorAt: ts('last_error_at'),
+  lastError: text('last_error'),
+  expectedEveryMinutes: integer('expected_every_minutes'),
+});
+
+// Gift subscriptions: bought with a one-off payment, redeemed with a code. Only the hash is stored.
+export const giftCodes = pgTable('gift_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  codeHash: text('code_hash').notNull().unique(),
+  tier: text('tier').notNull(),
+  months: integer('months').notNull().default(1),
+  purchaserAccountId: uuid('purchaser_account_id').references(() => accounts.id, { onDelete: 'set null' }),
+  stripeSessionId: text('stripe_session_id').unique(),
+  redeemedBy: uuid('redeemed_by').references(() => accounts.id, { onDelete: 'set null' }),
+  redeemedAt: ts('redeemed_at'),
+  expiresAt: ts('expires_at').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});

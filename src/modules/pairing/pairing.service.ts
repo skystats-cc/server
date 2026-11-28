@@ -1,5 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { AppError, NotFoundError } from '../../lib/errors.js';
+import { audit } from '../audit/audit.repo.js';
+
+const PAIRING_FAILURES_PER_HOUR = 10;
 import { formatPairingCode, newPairingCode, normalizePairingCode, safeEqualHex, sha256 } from '../../lib/ids.js';
 import { logger } from '../../lib/logger.js';
 import { accountsService } from '../accounts/accounts.service.js';
@@ -58,8 +61,13 @@ export const pairingService = {
     const code = normalizePairingCode(rawCode);
     if (!code) throw new AppError(400, 'invalid_code', 'That doesn\'t look like a SkyStats code (e.g. ABCD-EFGH)');
 
+    // Abuse limit: codes are short, so stop anyone guessing them
+    if ((await audit.countRecent(accountId, 'pairing.claim_failed', 60)) >= PAIRING_FAILURES_PER_HOUR) {
+      throw new AppError(429, 'too_many_attempts', 'Too many wrong codes. Try again in an hour.');
+    }
     const linked = await pairingRepo.link(code, accountId);
     if (!linked) {
+      await audit.log('user', 'pairing.claim_failed', accountId);
       const existing = await pairingRepo.findByCode(code);
       if (!existing) throw new AppError(404, 'invalid_code', 'Code not found. Check it on skystats.cc/link');
       throw new AppError(410, 'expired_code', 'That code has expired or was already used. Get a new one on skystats.cc/link');

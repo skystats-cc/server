@@ -82,3 +82,30 @@ export function deliverAfter(now: Date, quiet: { start: number | null; end: numb
   const wait = (quiet.end - cur + 1440) % 1440;
   return new Date(now.getTime() + wait * 60_000);
 }
+
+/**
+ * When a goal would be reached at the recent pace: least-squares slope over daily closing totals.
+ * Null when there's too little data or the balance isn't growing. Shown as an estimate, never a promise.
+ */
+export function goalEta(points: { day: Date; total: number }[], target: number, now = new Date()) {
+  if (points.length < 3) return null;
+  const t0 = points[0]!.day.getTime();
+  const xs = points.map((p) => (p.day.getTime() - t0) / 86_400_000);
+  const ys = points.map((p) => p.total);
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
+  const my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < xs.length; i++) {
+    num += (xs[i]! - mx) * (ys[i]! - my);
+    den += (xs[i]! - mx) ** 2;
+  }
+  if (den === 0) return null;
+  const perDay = num / den;
+  const latest = ys[ys.length - 1]!;
+  if (latest >= target) return { perDay, eta: now };
+  if (perDay <= 0) return { perDay, eta: null };
+  const days = (target - latest) / perDay;
+  if (days > 3650) return { perDay, eta: null };
+  return { perDay, eta: new Date(now.getTime() + days * 86_400_000) };
+}

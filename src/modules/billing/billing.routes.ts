@@ -6,14 +6,14 @@ import { entitlementsService } from '../entitlements/entitlements.service.js';
 import { billingService } from './billing.service.js';
 import { verifyStripeSignature } from './stripe.signature.js';
 
-const checkoutBody = z.object({ tier: z.enum(['pro', 'max']), interval: z.enum(['month', 'year']).default('month') }).strict();
+const checkoutBody = z.object({ tier: z.enum(['pro', 'max']), interval: z.enum(['month', 'year']).default('month'), creator: z.string().regex(/^[A-Za-z0-9_-]{2,24}$/).optional() }).strict();
 
 export const billingRoutes: FastifyPluginAsync = async (app) => {
   app.get('/v1/me/entitlement', { preHandler: requireAuth() }, async (req) => entitlementsService.describe(req.auth!.accountId));
 
   app.post('/v1/billing/checkout', { preHandler: requireAuth(['web', 'bot']) }, async (req) => {
-    const { tier, interval } = checkoutBody.parse(req.body ?? {});
-    return billingService.checkout(req.auth!.accountId, tier, interval);
+    const { tier, interval, creator } = checkoutBody.parse(req.body ?? {});
+    return billingService.checkout(req.auth!.accountId, tier, interval, creator?.toLowerCase());
   });
 
   app.post('/v1/billing/portal', { preHandler: requireAuth('web') }, async (req) => billingService.portal(req.auth!.accountId));
