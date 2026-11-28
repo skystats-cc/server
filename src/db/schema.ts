@@ -2,6 +2,7 @@ import {
   bigint,
   bigserial,
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -84,6 +85,11 @@ export const accounts = pgTable('accounts', {
     .unique()
     .references(() => players.uuid),
   trackingEnabled: boolean('tracking_enabled').notNull().default(true),
+  // Privacy (ICO Children's Code: high privacy by default, everything social is opt-in)
+  profilePublic: boolean('profile_public').notNull().default(false),
+  showOnLeaderboards: boolean('show_on_leaderboards').notNull().default(false),
+  allowActivityPings: boolean('allow_activity_pings').notNull().default(false),
+  hideBank: boolean('hide_bank').notNull().default(true),
   modLastSeenAt: ts('mod_last_seen_at'),
   modVersion: text('mod_version'),
   createdAt: ts('created_at').notNull().defaultNow(),
@@ -174,9 +180,70 @@ export const memberSnapshots = pgTable(
     personalBank: doublePrecision('personal_bank'),
     profileBank: doublePrecision('profile_bank'),
     skyblockXp: doublePrecision('skyblock_xp'),
+    // Where the numbers came from. Only 'mod' (the player's own client) is written now:
+    // Hypixel's API policy forbids building stat histories by polling the Public API.
+    source: text('source').notNull().default('mod'),
   },
   (t) => [
     index('member_snapshots_member_taken_idx').on(t.playerUuid, t.profileId, t.takenAt),
     index('member_snapshots_taken_idx').on(t.takenAt),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Rollups, billing, compliance
+// ---------------------------------------------------------------------------
+
+// One row per member per UTC day, rebuilt from member_snapshots by the rollup job.
+// Long chart ranges read this instead of raw snapshots.
+export const memberDaily = pgTable(
+  'member_daily',
+  {
+    playerUuid: text('player_uuid').notNull(),
+    profileId: text('profile_id').notNull(),
+    day: date('day', { mode: 'string' }).notNull(),
+    openTotal: doublePrecision('open_total'),
+    closeTotal: doublePrecision('close_total'),
+    minTotal: doublePrecision('min_total'),
+    maxTotal: doublePrecision('max_total'),
+    samples: integer('samples').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.playerUuid, t.profileId, t.day] })],
+);
+
+// What each account has paid for. Every service reads tiers from here (never from Stripe directly).
+export const entitlements = pgTable('entitlements', {
+  accountId: uuid('account_id')
+    .primaryKey()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  tier: text('tier').notNull().default('free'), // free | pro | max
+  status: text('status').notNull().default('none'), // none | trialing | active | past_due | canceled
+  stripeCustomerId: text('stripe_customer_id').unique(),
+  stripeSubscriptionId: text('stripe_subscription_id').unique(),
+  currentPeriodEnd: ts('current_period_end'),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  graceUntil: ts('grace_until'), // paid features stay on until here after a failed payment
+  downgradedAt: ts('downgraded_at'), // starts the 30-day soft-retention window
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+// Stripe sends webhooks at least once; this makes handling idempotent.
+export const stripeEvents = pgTable('stripe_events', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  receivedAt: ts('received_at').notNull().defaultNow(),
+});
+
+// Append-only record of privacy, billing and admin actions (UK GDPR accountability).
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    at: ts('at').notNull().defaultNow(),
+    actor: text('actor').notNull(), // 'user' | 'admin' | 'system' | 'stripe'
+    action: text('action').notNull(),
+    accountId: uuid('account_id'), // kept (not FK) so the log survives account deletion
+    details: jsonb('details').notNull().default({}),
+  },
+  (t) => [index('audit_log_account_idx').on(t.accountId, t.at)],
 );

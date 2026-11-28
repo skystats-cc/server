@@ -38,8 +38,19 @@ const schema = z.object({
   MOD_SESSION_DAYS: z.coerce.number().int().positive().default(90),
 
   // SkyBlock profiles
-  PROFILE_REFRESH_MIN_MINUTES: z.coerce.number().positive().default(5), // never fetch one player more often
-  MEMBER_SNAPSHOT_MIN_MINUTES: z.coerce.number().positive().default(15), // money-history resolution
+  // On-demand profile lookups are cached this long. Keep it high: Hypixel forbids continuous polling.
+  PROFILE_REFRESH_MIN_MINUTES: z.coerce.number().positive().default(60),
+  MEMBER_SNAPSHOT_MIN_MINUTES: z.coerce.number().positive().default(5), // mod-reported money-history resolution
+
+  // Billing (Stripe). Without STRIPE_SECRET_KEY, checkout and the portal return 503.
+  STRIPE_SECRET_KEY: z.string().default(''),
+  STRIPE_WEBHOOK_SECRET: z.string().default(''),
+  // Comma-separated Stripe price ids per tier (monthly, yearly, ...)
+  STRIPE_PRICES_PRO: z.string().default('').transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+  STRIPE_PRICES_MAX: z.string().default('').transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+  PUBLIC_WEB_URL: z.string().url().default('https://skystats.cc'),
+  BILLING_GRACE_DAYS: z.coerce.number().int().min(0).default(7), // paid features after a failed payment
+  SOFT_RETENTION_DAYS: z.coerce.number().int().min(0).default(30), // hidden-not-deleted window after downgrade
 
   BAZAAR_POLL_SECONDS: z.coerce.number().int().min(10).default(30),
   BAZAAR_SNAPSHOT_CRON: z.string().default('0 */2 * * *'), // every 2 hours

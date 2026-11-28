@@ -32,7 +32,11 @@ export const skyblockService = {
     return true;
   },
 
-  /** Worker: fetch from Hypixel, store profiles + co-op members, snapshot money, queue name lookups */
+  /**
+   * Worker: fetch from Hypixel and store profiles + co-op members, then queue name lookups.
+   * This is an on-demand, cached lookup (link, viewing /me, an unknown profile from the mod).
+   * It never writes money history: that only comes from the player's own mod (see moneyService).
+   */
   async refreshPlayer(uuid: string) {
     const player = await skyblockRepo.getPlayer(uuid);
     if (player?.profilesFetchedAt && player.profilesFetchedAt > minutesAgo(1)) return; // just done
@@ -40,33 +44,13 @@ export const skyblockService = {
     const profiles = parseProfiles(await fetchSkyblockProfiles(uuid));
     await skyblockRepo.saveProfiles(uuid, profiles);
 
-    const memberUuids = [...new Set(profiles.flatMap((p) => p.members.map((m) => m.uuid)))];
-    const optedOut = await skyblockRepo.trackingDisabled(memberUuids);
-    let snapshots = 0;
-    for (const p of profiles) {
-      for (const m of p.members) {
-        if (!m.active || optedOut.has(m.uuid)) continue;
-        const taken = await skyblockRepo.snapshotIfDue(
-          {
-            profileId: p.id,
-            playerUuid: m.uuid,
-            purse: m.purse,
-            personalBank: m.personalBank,
-            profileBank: p.bankBalance,
-            skyblockXp: m.skyblockXp,
-          },
-          config.MEMBER_SNAPSHOT_MIN_MINUTES,
-        );
-        if (taken) snapshots++;
-      }
-    }
 
     // Names only for people we actually show (active members)
     const shown = [...new Set(profiles.flatMap((p) => p.members.filter((m) => m.active).map((m) => m.uuid)))];
     for (const memberUuid of await skyblockRepo.needingNames(shown, new Date(Date.now() - NAME_MAX_AGE_MS))) {
       await boss.send(SKYBLOCK_QUEUES.lookupName, { uuid: memberUuid }, { singletonKey: memberUuid });
     }
-    logger.info({ uuid, profiles: profiles.length, snapshots }, 'skyblock profiles refreshed');
+    logger.info({ uuid, profiles: profiles.length }, 'skyblock profiles refreshed');
   },
 
   /** Worker: resolve a username via Mojang */
@@ -75,12 +59,6 @@ export const skyblockService = {
     await skyblockRepo.setUsername(uuid, profile?.name ?? null);
   },
 
-  /** Worker cron: keep people who are actively playing with the mod fresh */
-  async refreshActive() {
-    const stale = await accountsRepo.staleActiveAccounts(minutesAgo(15), minutesAgo(24 * 60), 50);
-    for (const { uuid } of stale) await this.requestRefresh(uuid);
-    return stale.length;
-  },
 
   /** API: the signed-in player's profiles, grouped with their co-op members */
   async myProfiles(uuid: string) {
@@ -102,8 +80,9 @@ export const skyblockService = {
               usesMod: m.modLastSeenAt !== null && now - m.modLastSeenAt.getTime() < USES_MOD_WITHIN_MS,
               trackingEnabled: m.accountId === null ? null : (m.trackingEnabled ?? true),
               firstJoin: m.firstJoin,
-              purse: m.purse,
-              personalBank: m.personalBank,
+              // Co-op mates only see each other's coins when that member allows it
+              purse: m.uuid === uuid || m.hideBank === false ? m.purse : null,
+              personalBank: m.uuid === uuid || m.hideBank === false ? m.personalBank : null,
               skyblockLevel: skyblockLevel(m.skyblockXp),
             }))
             // you first, then by join date

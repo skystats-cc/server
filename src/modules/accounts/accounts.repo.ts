@@ -1,4 +1,4 @@
-import { and, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, eq, gt, lt } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accounts, authChallenges, pairings, players, sessions } from '../../db/schema.js';
 
@@ -112,19 +112,4 @@ export const accountsRepo = {
     return { sessions: s.length, pairings: p.length };
   },
 
-  /** Accounts actively using the mod whose profiles are stale */
-  async staleActiveAccounts(staleBefore: Date, activeAfter: Date, limit: number) {
-    return db
-      .select({ uuid: accounts.playerUuid })
-      .from(accounts)
-      .innerJoin(players, eq(players.uuid, accounts.playerUuid))
-      .where(
-        and(
-          eq(accounts.trackingEnabled, true),
-          gt(accounts.modLastSeenAt, activeAfter),
-          sql`(${players.profilesFetchedAt} is null or ${players.profilesFetchedAt} < ${staleBefore})`,
-        ),
-      )
-      .limit(limit);
-  },
 };

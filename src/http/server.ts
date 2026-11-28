@@ -8,8 +8,12 @@ import { logger } from '../lib/logger.js';
 import { accountsRoutes } from '../modules/accounts/accounts.routes.js';
 import { authRoutes } from '../modules/auth/auth.routes.js';
 import { bazaarRoutes } from '../modules/bazaar/bazaar.routes.js';
+import { billingRoutes } from '../modules/billing/billing.routes.js';
 import { modRoutes } from '../modules/mod/mod.routes.js';
+import { moneyRoutes } from '../modules/money/money.routes.js';
 import { pairingRoutes } from '../modules/pairing/pairing.routes.js';
+import { playersRoutes } from '../modules/players/players.routes.js';
+import { privacyRoutes } from '../modules/privacy/privacy.routes.js';
 import { skyblockRoutes } from '../modules/skyblock/skyblock.routes.js';
 import { statusRoutes } from '../modules/status/status.routes.js';
 import { adminRoutes } from '../ops/admin.js';
@@ -84,6 +88,10 @@ export async function buildServer() {
   await app.register(accountsRoutes);
   await app.register(skyblockRoutes);
   await app.register(modRoutes);
+  await app.register(moneyRoutes);
+  await app.register(privacyRoutes);
+  await app.register(billingRoutes);
+  await app.register(playersRoutes);
   // Register new module routes here.
 
   return app;
