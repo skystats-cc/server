@@ -1,3 +1,4 @@
+import { platformService } from '../platform/platform.service.js';
 import { fetchElection } from '../../ingest/hypixel.js';
 import { fetchPatchNotes } from '../../ingest/news.js';
 import { config } from '../../lib/config.js';
@@ -6,7 +7,7 @@ import { logger } from '../../lib/logger.js';
 import { effectiveTier, hasFeature, type Feature, type Tier } from '../entitlements/tiers.js';
 import { entitlementsService } from '../entitlements/entitlements.service.js';
 import { alertsRepo, type PrefsRow } from './alerts.repo.js';
-import { deliverAfter, localMinutes, manipulationSignal, priceCondition, robustZ, stepRule, type Op } from './rules.js';
+import { goalEta, deliverAfter, localMinutes, manipulationSignal, priceCondition, robustZ, stepRule, type Op } from './rules.js';
 
 const DAY = 86_400_000;
 export const RULE_LIMITS: Record<Tier, number> = { free: 0, pro: 25, max: 200 };
@@ -40,7 +41,7 @@ export const alertsService = {
   async notify(accountId: string, n: { kind: string; title: string; body: string; url?: string; dedupeKey?: string }) {
     const p = { ...DEFAULT_PREFS, ...(await alertsRepo.prefs(accountId)) };
     const dm = p.discordDm && (await alertsRepo.hasDiscord(accountId));
-    return alertsRepo.insertNotification({
+    const inserted = await alertsRepo.insertNotification({
       accountId,
       kind: n.kind,
       title: n.title,
@@ -50,6 +51,9 @@ export const alertsService = {
       deliverAfter: deliverAfter(new Date(), { start: p.quietStartMin, end: p.quietEndMin, timeZone: p.timeZone }),
       dmStatus: dm ? 'pending' : 'none',
     });
+    // Max: also send it to the user's own webhooks (skipped when deduped)
+    if (inserted) void platformService.fanOut(accountId, n).catch((err) => logger.warn({ err }, 'webhook fan-out failed'));
+    return inserted;
   },
 
   // ---------------------------------------------------------------- prefs
@@ -170,7 +174,17 @@ export const alertsService = {
   },
 
   // ---------------------------------------------------------------- goals
-  listGoals: (accountId: string) => alertsRepo.listGoals(accountId),
+  /** Goals with a pace-based ETA from the last 14 days of daily totals (an estimate, labelled as such) */
+  async listGoals(accountId: string) {
+    const goals = await alertsRepo.listGoals(accountId);
+    return Promise.all(
+      goals.map(async (g) => {
+        const pts = await alertsRepo.dailyTotals(accountId, g.profileId, 14);
+        const r = g.reachedAt ? null : goalEta(pts, g.target);
+        return { ...g, perDay: r?.perDay ?? null, eta: r?.eta ?? null };
+      }),
+    );
+  },
   createGoal: (accountId: string, profileId: string, target: number) => alertsRepo.createGoal(accountId, profileId, target),
   async deleteGoal(accountId: string, id: string) {
     if (!(await alertsRepo.deleteGoal(accountId, id))) throw new NotFoundError('goal');

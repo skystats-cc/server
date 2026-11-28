@@ -121,6 +121,11 @@ export const accountsRepo = {
     return rows.length;
   },
 
+  async isBanned(accountId: string) {
+    const [r] = await db.select({ b: accounts.bannedAt }).from(accounts).where(eq(accounts.id, accountId)).limit(1);
+    return Boolean(r?.b);
+  },
+
   async deleteSession(sessionId: string) {
     await db.delete(sessions).where(eq(sessions.id, sessionId));
   },

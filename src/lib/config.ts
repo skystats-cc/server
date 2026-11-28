@@ -71,6 +71,13 @@ const schema = z.object({
   // Check the source's licence before turning this on.
   RECIPES_SOURCE_URL: z.string().default(''),
 
+  // Ops
+  SENTRY_DSN: z.string().default(''), // Sentry or GlitchTip
+  METRICS_TOKEN: z.string().default(''), // bearer token Prometheus sends to /metrics
+  API_KEY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(600),
+  STRIPE_GIFT_PRICE_PRO: z.string().default(''), // one-off price for one month of Pro (gifts)
+  STRIPE_GIFT_PRICE_MAX: z.string().default(''),
+
   BAZAAR_POLL_SECONDS: z.coerce.number().int().min(10).default(30),
   BAZAAR_SNAPSHOT_CRON: z.string().default('0 */2 * * *'), // every 2 hours
   STATUS_POLL_SECONDS: z.coerce.number().int().min(30).default(60),

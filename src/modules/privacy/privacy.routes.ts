@@ -23,7 +23,7 @@ export const privacyRoutes: FastifyPluginAsync = async (app) => {
   app.get('/v1/me/privacy', { preHandler: requireAuth(['web', 'bot']) }, async (req) => privacyService.get(req.auth!.accountId));
 
   app.patch('/v1/me/privacy', { preHandler: requireAuth(['web', 'bot']) }, async (req) =>
-    privacyService.update(req.auth!.accountId, patchBody.parse(req.body ?? {}), req.auth!.kind),
+    privacyService.update(req.auth!.accountId, patchBody.parse(req.body ?? {}), req.auth!.kind as 'web' | 'bot'),
   );
 
   // Right of access + portability. Free for everyone, a few times an hour.

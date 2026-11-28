@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deliverAfter, localMinutes, manipulationSignal, priceCondition, robustZ, stepRule } from './rules.js';
+import { deliverAfter, localMinutes, manipulationSignal, priceCondition, robustZ, stepRule, goalEta } from './rules.js';
 
 const t = (iso: string) => new Date(iso);
 
@@ -45,5 +45,19 @@ describe('quiet hours', () => {
     expect(deliverAfter(t('2026-12-01T23:00:00Z'), q)).toEqual(t('2026-12-02T07:00:00Z'));
     expect(deliverAfter(t('2026-12-01T12:00:00Z'), q)).toEqual(t('2026-12-01T12:00:00Z'));
     expect(deliverAfter(t('2026-12-01T12:00:00Z'), { start: null, end: null, timeZone: 'UTC' })).toEqual(t('2026-12-01T12:00:00Z'));
+  });
+});
+
+describe('goalEta', () => {
+  const day = (n: number) => new Date(Date.UTC(2026, 0, 1 + n));
+  it('projects a steady climb', () => {
+    const pts = [0, 1, 2, 3].map((n) => ({ day: day(n), total: 1e6 * n }));
+    const r = goalEta(pts, 10e6, day(3))!;
+    expect(r.perDay).toBeCloseTo(1e6);
+    expect(r.eta!.toISOString()).toBe(day(10).toISOString());
+  });
+  it('gives no date when shrinking or with too little data', () => {
+    expect(goalEta([{ day: day(0), total: 5 }], 10)).toBeNull();
+    expect(goalEta([0, 1, 2].map((n) => ({ day: day(n), total: 10 - n })), 100)!.eta).toBeNull();
   });
 });

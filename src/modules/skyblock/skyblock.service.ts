@@ -19,7 +19,7 @@ export const skyblockService = {
    * Queue a Hypixel fetch for this player, unless it was fetched within PROFILE_REFRESH_MIN_MINUTES.
    * Cheap to call often (heartbeats, page views): the queue dedupes per player.
    */
-  async requestRefresh(uuid: string, opts: { minMinutes?: number } = {}) {
+  async requestRefresh(uuid: string, opts: { minMinutes?: number; priority?: number } = {}) {
     if (!hasHypixelKey()) {
       if (!warnedNoKey) logger.warn('HYPIXEL_API_KEY not set: SkyBlock profile refreshes are disabled');
       warnedNoKey = true;
@@ -28,7 +28,8 @@ export const skyblockService = {
     const player = await skyblockRepo.getPlayer(uuid);
     const minMinutes = opts.minMinutes ?? config.PROFILE_REFRESH_MIN_MINUTES;
     if (player?.profilesFetchedAt && player.profilesFetchedAt > minutesAgo(minMinutes)) return false;
-    await boss.send(SKYBLOCK_QUEUES.refreshPlayer, { uuid }, { singletonKey: uuid });
+    // Paid refreshes jump the queue (priority lane); everyone still gets refreshed
+    await boss.send(SKYBLOCK_QUEUES.refreshPlayer, { uuid }, { singletonKey: uuid, priority: opts.priority ?? 0 });
     return true;
   },
 
