@@ -62,6 +62,9 @@ const schema = z.object({
   // Shared secret the bot sends as x-bot-key. Empty = bot access off. Never accepted through Cloudflare.
   BOT_API_KEY: z.string().default('').refine((v) => v === '' || v.length >= 32, 'BOT_API_KEY must be at least 32 characters'),
 
+  // SkyBlock patch notes feed for free patch notices (empty = off)
+  SKYBLOCK_NEWS_RSS_URL: z.string().default('https://hypixel.net/forums/skyblock-patch-notes.158/index.rss'),
+
   BAZAAR_POLL_SECONDS: z.coerce.number().int().min(10).default(30),
   BAZAAR_SNAPSHOT_CRON: z.string().default('0 */2 * * *'), // every 2 hours
   STATUS_POLL_SECONDS: z.coerce.number().int().min(30).default(60),

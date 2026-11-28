@@ -11,7 +11,8 @@ export const entitlementsService = {
   async require(accountId: string, feature: Feature) {
     const tier = await this.tierOf(accountId);
     if (!hasFeature(tier, feature)) {
-      throw new ForbiddenError('upgrade_required', `This needs SkyStats ${FEATURES[feature]} or above`);
+      const min = FEATURES[feature];
+      throw new ForbiddenError('upgrade_required', `This needs SkyStats ${min[0]!.toUpperCase()}${min.slice(1)} or above`);
     }
     return tier;
   },

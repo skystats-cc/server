@@ -11,6 +11,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -277,4 +278,104 @@ export const oauthStates = pgTable('oauth_states', {
   mode: text('mode').notNull(), // login | link
   accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
   expiresAt: ts('expires_at').notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Alerts & notifications (phase 3)
+// ---------------------------------------------------------------------------
+
+// Per-account delivery preferences. Every channel and digest is opt-in.
+export const notificationPrefs = pgTable('notification_prefs', {
+  accountId: uuid('account_id')
+    .primaryKey()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  discordDm: boolean('discord_dm').notNull().default(false),
+  quietStartMin: integer('quiet_start_min'), // minutes after local midnight; null = no quiet hours
+  quietEndMin: integer('quiet_end_min'),
+  timeZone: text('time_zone').notNull().default('Europe/London'),
+  dailyDigest: boolean('daily_digest').notNull().default(false),
+  weeklyRecap: boolean('weekly_recap').notNull().default(false),
+  coopActivity: boolean('coop_activity').notNull().default(false),
+  mayorReminder: boolean('mayor_reminder').notNull().default(false),
+  patchNotes: boolean('patch_notes').notNull().default(false),
+  outages: boolean('outages').notNull().default(false),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+// Price / anomaly / manipulation rules on bazaar items
+export const alertRules = pgTable(
+  'alert_rules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // price | anomaly | manipulation
+    productId: text('product_id').notNull(),
+    side: text('side').notNull().default('buy'), // buy | sell price
+    op: text('op'), // above | below (price rules)
+    threshold: doublePrecision('threshold'), // coins (price) or z-score (anomaly)
+    cooldownMinutes: integer('cooldown_minutes').notNull().default(60),
+    armed: boolean('armed').notNull().default(true), // hysteresis: re-arms once the condition clears
+    active: boolean('active').notNull().default(true),
+    lastFiredAt: ts('last_fired_at'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('alert_rules_account_idx').on(t.accountId), index('alert_rules_product_idx').on(t.productId)],
+);
+
+// Money goals ("5B by March")
+export const moneyGoals = pgTable('money_goals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  profileId: text('profile_id').notNull(),
+  target: doublePrecision('target').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  reachedAt: ts('reached_at'),
+});
+
+// Outbox: every alert lands here; the bot delivers DMs, the site lists them.
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    url: text('url'),
+    dedupeKey: text('dedupe_key'), // one notification per key per account
+    createdAt: ts('created_at').notNull().defaultNow(),
+    deliverAfter: ts('deliver_after').notNull().defaultNow(), // pushed past quiet hours
+    dmStatus: text('dm_status').notNull().default('none'), // none | pending | sent | failed
+    readAt: ts('read_at'),
+  },
+  (t) => [
+    index('notifications_account_idx').on(t.accountId, t.createdAt),
+    index('notifications_dm_idx').on(t.dmStatus, t.deliverAfter),
+    uniqueIndex('notifications_dedupe_idx').on(t.accountId, t.dedupeKey),
+  ],
+);
+
+// SkyBlock news (patch notes) and the current election, for free notices and mayor reminders
+export const skyblockNews = pgTable('skyblock_news', {
+  id: text('id').primaryKey(), // link URL
+  title: text('title').notNull(),
+  publishedAt: ts('published_at'),
+  seenAt: ts('seen_at').notNull().defaultNow(),
+  announcedAt: ts('announced_at'),
+});
+
+export const skyblockElection = pgTable('skyblock_election', {
+  id: text('id').primaryKey(), // 'current'
+  year: integer('year'),
+  mayor: text('mayor'),
+  perks: jsonb('perks').notNull().default([]),
+  candidates: jsonb('candidates').notNull().default([]),
+  open: boolean('open').notNull().default(false),
+  checkedAt: ts('checked_at').notNull(),
 });

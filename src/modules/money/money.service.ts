@@ -3,6 +3,7 @@ import { ConflictError } from '../../lib/errors.js';
 import { normalizeUuid } from '../../lib/ids.js';
 import { logger } from '../../lib/logger.js';
 import { accountsService } from '../accounts/accounts.service.js';
+import { alertsService } from '../alerts/alerts.service.js';
 import { entitlementsService } from '../entitlements/entitlements.service.js';
 import { deleteBefore, effectiveTier, TIERS, visibleFrom } from '../entitlements/tiers.js';
 import { skyblockService } from '../skyblock/skyblock.service.js';
@@ -42,6 +43,10 @@ export const moneyService = {
       },
       config.MEMBER_SNAPSHOT_MIN_MINUTES,
     );
+    if (stored) {
+      const total = input.purse + (input.personalBank ?? 0) + (input.profileBank ?? 0);
+      void alertsService.checkGoals(accountId, profileId, total).catch((err) => logger.warn({ err }, 'goal check failed'));
+    }
     return { stored, reason: stored ? undefined : ('too_soon' as const) };
   },
 
