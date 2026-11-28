@@ -12,6 +12,7 @@ const patchBody = z
     hideBank: z.boolean(),
     discordPublic: z.boolean(),
     showTierRole: z.boolean(),
+    activityInsights: z.boolean(),
   })
   .partial()
   .strict();

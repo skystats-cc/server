@@ -3,7 +3,10 @@ import { db } from '../../db/client.js';
 import {
   accounts,
   alertRules,
+  annotations,
   auditLog,
+  modEvents,
+  playSessions,
   customMethods,
   methodVotes,
   watchlist,
@@ -21,7 +24,7 @@ import {
   skyblockProfiles,
 } from '../../db/schema.js';
 
-export const PRIVACY_FIELDS = ['trackingEnabled', 'profilePublic', 'showOnLeaderboards', 'allowActivityPings', 'hideBank', 'discordPublic', 'showTierRole'] as const;
+export const PRIVACY_FIELDS = ['trackingEnabled', 'profilePublic', 'showOnLeaderboards', 'allowActivityPings', 'hideBank', 'discordPublic', 'showTierRole', 'activityInsights'] as const;
 export type PrivacySettings = Record<(typeof PRIVACY_FIELDS)[number], boolean>;
 
 export const privacyRepo = {
@@ -35,6 +38,7 @@ export const privacyRepo = {
         hideBank: accounts.hideBank,
         discordPublic: accounts.discordPublic,
         showTierRole: accounts.showTierRole,
+        activityInsights: accounts.activityInsights,
       })
       .from(accounts)
       .where(eq(accounts.id, accountId))
@@ -73,6 +77,9 @@ export const privacyRepo = {
       entitlement: entitlement ?? null,
       notificationPrefs: (await db.select().from(notificationPrefs).where(eq(notificationPrefs.accountId, accountId)))[0] ?? null,
       alerts: await db.select().from(alertRules).where(eq(alertRules.accountId, accountId)),
+      playSessions: await db.select().from(playSessions).where(eq(playSessions.accountId, accountId)),
+      modEvents: await db.select().from(modEvents).where(eq(modEvents.accountId, accountId)),
+      annotations: await db.select().from(annotations).where(eq(annotations.accountId, accountId)),
       watchlist: await db.select().from(watchlist).where(eq(watchlist.accountId, accountId)),
       customMethods: await db.select().from(customMethods).where(eq(customMethods.accountId, accountId)),
       methodVotes: await db.select().from(methodVotes).where(eq(methodVotes.accountId, accountId)),

@@ -9,6 +9,8 @@ export interface SnapshotInput {
   personalBank: number | null;
   profileBank: number | null;
   skyblockXp: number | null;
+  inventoryValue?: number | null;
+  kind?: 'normal' | 'transfer' | 'reset';
 }
 
 const total = sql<number>`coalesce(${memberSnapshots.purse}, 0) + coalesce(${memberSnapshots.personalBank}, 0) + coalesce(${memberSnapshots.profileBank}, 0)`;

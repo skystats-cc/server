@@ -43,6 +43,13 @@
       "when": 1795815667895,
       "tag": "0005_phase4_bazaar_methods",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795816346745,
+      "tag": "0006_phase5_mod_insight",
+      "breakpoints": true
     }
   ]
 }
