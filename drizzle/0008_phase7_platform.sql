@@ -34,6 +34,17 @@ CREATE TABLE "gift_codes" (
 	CONSTRAINT "gift_codes_stripe_session_id_unique" UNIQUE("stripe_session_id")
 );
 --> statement-breakpoint
+CREATE TABLE "guild_settings" (
+	"guild_id" text PRIMARY KEY NOT NULL,
+	"status_channel_id" text,
+	"news_channel_id" text,
+	"board_channel_id" text,
+	"bazaar_channel_id" text,
+	"verified_role_id" text,
+	"updated_by" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "job_runs" (
 	"name" text PRIMARY KEY NOT NULL,
 	"last_ok_at" timestamp with time zone,

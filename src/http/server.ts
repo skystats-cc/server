@@ -9,6 +9,7 @@ import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { httpDuration } from '../lib/metrics.js';
 import { captureError } from '../lib/sentry.js';
+import { guildRoutes } from '../modules/platform/guilds.routes.js';
 import { platformRoutes } from '../modules/platform/platform.routes.js';
 import { accountsRoutes } from '../modules/accounts/accounts.routes.js';
 import { authRoutes } from '../modules/auth/auth.routes.js';
@@ -128,6 +129,7 @@ export async function buildServer() {
   await app.register(insightRoutes);
   await app.register(socialRoutes);
   await app.register(platformRoutes);
+  await app.register(guildRoutes);
   // Register new module routes here.
 
   return app;

@@ -746,3 +746,15 @@ export const giftCodes = pgTable('gift_codes', {
   expiresAt: ts('expires_at').notNull(),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+// Per-Discord-server bot settings, set by server admins with /setup. Channel and role ids only.
+export const guildSettings = pgTable('guild_settings', {
+  guildId: text('guild_id').primaryKey(),
+  statusChannelId: text('status_channel_id'),
+  newsChannelId: text('news_channel_id'),
+  boardChannelId: text('board_channel_id'),
+  bazaarChannelId: text('bazaar_channel_id'),
+  verifiedRoleId: text('verified_role_id'),
+  updatedBy: text('updated_by'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});

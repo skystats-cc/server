@@ -1,5 +1,5 @@
 {
-  "id": "52084ca1-3615-420a-8154-3b1937328c07",
+  "id": "8a335600-421c-4ba0-996a-dc3d12ac74b2",
   "prevId": "0dcf8fc8-06be-48f7-ac44-c55ea2941af0",
   "version": "7",
   "dialect": "postgresql",
@@ -1806,6 +1806,68 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.guild_settings": {
+      "name": "guild_settings",
+      "schema": "",
+      "columns": {
+        "guild_id": {
+          "name": "guild_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "status_channel_id": {
+          "name": "status_channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "news_channel_id": {
+          "name": "news_channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "board_channel_id": {
+          "name": "board_channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bazaar_channel_id": {
+          "name": "bazaar_channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verified_role_id": {
+          "name": "verified_role_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
