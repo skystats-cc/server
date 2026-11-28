@@ -5,6 +5,7 @@ import * as bazaar from '../modules/bazaar/bazaar.jobs.js';
 import * as insight from '../modules/insight/insight.jobs.js';
 import * as market from '../modules/market/market.jobs.js';
 import * as money from '../modules/money/money.jobs.js';
+import * as social from '../modules/social/social.jobs.js';
 import * as skyblock from '../modules/skyblock/skyblock.jobs.js';
 import * as status from '../modules/status/status.jobs.js';
 import type { QueueDef } from './queue.js';
@@ -15,7 +16,7 @@ export interface JobModule {
 }
 
 // Add each new module here.
-const modules: JobModule[] = [bazaar, status, accounts, skyblock, money, alerts, market, insight];
+const modules: JobModule[] = [bazaar, status, accounts, skyblock, money, alerts, market, insight, social];
 
 export const allQueues = modules.flatMap((m) => m.queues);
 export const allQueueNames = allQueues.map((q) => (typeof q === 'string' ? q : q.name));

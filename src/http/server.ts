@@ -17,6 +17,7 @@ import { modRoutes } from '../modules/mod/mod.routes.js';
 import { moneyRoutes } from '../modules/money/money.routes.js';
 import { pairingRoutes } from '../modules/pairing/pairing.routes.js';
 import { playersRoutes } from '../modules/players/players.routes.js';
+import { socialRoutes } from '../modules/social/social.routes.js';
 import { privacyRoutes } from '../modules/privacy/privacy.routes.js';
 import { skyblockRoutes } from '../modules/skyblock/skyblock.routes.js';
 import { statusRoutes } from '../modules/status/status.routes.js';
@@ -100,6 +101,7 @@ export async function buildServer() {
   await app.register(alertsRoutes);
   await app.register(marketRoutes);
   await app.register(insightRoutes);
+  await app.register(socialRoutes);
   // Register new module routes here.
 
   return app;

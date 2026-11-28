@@ -12,10 +12,14 @@ export const playersRepo = {
         hideBank: accounts.hideBank,
         trackingEnabled: accounts.trackingEnabled,
         modLastSeenAt: accounts.modLastSeenAt,
+        accountId: accounts.id,
+        profileTheme: accounts.profileTheme,
+        vanity: accounts.vanity,
+        showTierRole: accounts.showTierRole,
       })
       .from(players)
       .innerJoin(accounts, eq(accounts.playerUuid, players.uuid))
-      .where(and(sql`lower(${players.username}) = lower(${name})`, eq(accounts.profilePublic, true)))
+      .where(and(sql`(lower(${players.username}) = lower(${name}) or lower(${accounts.vanity}) = lower(${name}))`, eq(accounts.profilePublic, true)))
       .limit(1);
     return row ?? null;
   },
