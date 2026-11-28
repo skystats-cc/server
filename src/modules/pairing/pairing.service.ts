@@ -3,19 +3,21 @@ import { AppError, NotFoundError } from '../../lib/errors.js';
 import { formatPairingCode, newPairingCode, normalizePairingCode, safeEqualHex, sha256 } from '../../lib/ids.js';
 import { logger } from '../../lib/logger.js';
 import { accountsService } from '../accounts/accounts.service.js';
+import { discordRepo } from '../discord/discord.repo.js';
+import { discordService } from '../discord/discord.service.js';
 import { pairingRepo } from './pairing.repo.js';
 
 const TTL_MS = 10 * 60_000;
 const POLL_SECONDS = 2;
 
 export const pairingService = {
-  /** Website: create a code to show. The secret stays in the browser and authorizes polling. */
-  async create() {
+  /** Website (or the bot for /link): create a code to show. The secret authorizes polling. */
+  async create(discord?: { id: string; username: string | null }) {
     const secret = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + TTL_MS);
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = newPairingCode();
-      const id = await pairingRepo.create(code, sha256(secret), expiresAt);
+      const id = await pairingRepo.create(code, sha256(secret), expiresAt, discord);
       if (id) {
         const pretty = formatPairingCode(code);
         return {
@@ -56,12 +58,36 @@ export const pairingService = {
     const code = normalizePairingCode(rawCode);
     if (!code) throw new AppError(400, 'invalid_code', 'That doesn\'t look like a SkyStats code (e.g. ABCD-EFGH)');
 
-    if (!(await pairingRepo.link(code, accountId))) {
+    const linked = await pairingRepo.link(code, accountId);
+    if (!linked) {
       const existing = await pairingRepo.findByCode(code);
       if (!existing) throw new AppError(404, 'invalid_code', 'Code not found. Check it on skystats.cc/link');
       throw new AppError(410, 'expired_code', 'That code has expired or was already used. Get a new one on skystats.cc/link');
     }
     logger.info({ accountId }, 'pairing linked');
+    // Started from Discord (/link): link that Discord user too
+    if (linked.discordId) {
+      await discordService
+        .linkAccount(accountId, { id: linked.discordId, username: linked.discordUsername ?? '' }, 'bot')
+        .catch((err) => logger.info({ err: (err as Error).message }, 'discord link from pairing skipped'));
+    }
     return { linked: true as const, account: await accountsService.get(accountId) };
+  },
+
+  /** Bot: has the player confirmed the code in game yet? Only the Discord user who started it may ask. */
+  async botStatus(id: string, discordId: string) {
+    const p = await pairingRepo.get(id);
+    if (!p || p.discordId !== discordId) throw new NotFoundError('pairing');
+    if (p.status !== 'pending') {
+      const account = p.accountId ? await accountsService.get(p.accountId).catch(() => null) : null;
+      const identity = p.accountId ? await discordRepo.forAccount(p.accountId) : null;
+      return {
+        status: account ? ('linked' as const) : ('expired' as const),
+        username: account?.username ?? null,
+        // false when this would be a second account on a free plan (alts need Pro or Max)
+        discordLinked: identity?.discordId === discordId,
+      };
+    }
+    return { status: p.expiresAt.getTime() < Date.now() ? ('expired' as const) : ('pending' as const), username: null, discordLinked: false };
   },
 };

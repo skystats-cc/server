@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { requireAuth, setSessionCookie } from '../../http/auth.js';
+import { requireAuth, requireBot, setSessionCookie } from '../../http/auth.js';
 import { pairingService } from './pairing.service.js';
 
 const idParams = z.object({ pairingId: z.string().uuid() });
@@ -27,6 +27,18 @@ export const pairingRoutes: FastifyPluginAsync = async (app) => {
       return result;
     },
   );
+
+  // Bot /link: the code is tied to the Discord user, so claiming it links Discord as well
+  const botBody = z.object({ discordUsername: z.string().max(64).nullable().optional() }).strict();
+  app.post('/v1/bot/pairing', { preHandler: requireBot }, async (req, reply) => {
+    const { discordUsername } = botBody.parse(req.body ?? {});
+    const p = await pairingService.create({ id: req.bot!.discordUserId, username: discordUsername ?? null });
+    return reply.code(201).send({ id: p.id, code: p.code, command: p.command, expiresAt: p.expiresAt });
+  });
+  app.get('/v1/bot/pairing/:pairingId', { preHandler: requireBot }, async (req) => {
+    const { pairingId } = idParams.parse(req.params);
+    return pairingService.botStatus(pairingId, req.bot!.discordUserId);
+  });
 
   app.post(
     '/v1/pairing/claim',

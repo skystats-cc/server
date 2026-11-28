@@ -10,14 +10,14 @@ export const privacyService = {
     return s;
   },
 
-  async update(accountId: string, set: Partial<PrivacySettings>) {
+  async update(accountId: string, set: Partial<PrivacySettings>, via: 'web' | 'bot' | 'mod' = 'web') {
     const before = await this.get(accountId);
     await privacyRepo.update(accountId, set);
     const after = await this.get(accountId);
     const changed = Object.fromEntries(
       (Object.keys(set) as (keyof PrivacySettings)[]).filter((k) => before[k] !== after[k]).map((k) => [k, after[k]]),
     );
-    if (Object.keys(changed).length) await audit.log('user', 'privacy.updated', accountId, changed);
+    if (Object.keys(changed).length) await audit.log('user', 'privacy.updated', accountId, { ...changed, via });
     return after;
   },
 

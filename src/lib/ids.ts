@@ -15,6 +15,13 @@ export function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
+/** Constant-time comparison of two strings (e.g. shared secrets) */
+export function safeEqualText(a: string, b: string): boolean {
+  const ab = createHash('sha256').update(a).digest();
+  const bb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ab, bb) && a.length === b.length;
+}
+
 export function safeEqualHex(a: string, b: string): boolean {
   const ab = Buffer.from(a, 'hex');
   const bb = Buffer.from(b, 'hex');
